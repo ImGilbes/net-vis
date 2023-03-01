@@ -1,7 +1,31 @@
-import requests
 import json
+import requests
 import networkx as nx
 import matplotlib.pyplot as plt
+
+def on_node_click(event):
+    label = event.artist.get_label()
+    # print(f"You clicked host {node}")
+    
+    if is_node(label):
+        node = label
+        if G.nodes[node]['group'] == 'switch':
+            print("ugugguu")
+        elif  G.nodes[node]['group'] == 'host':
+            print("auauauauau")
+    else:
+        print(label)
+
+
+def is_node(label) -> bool:
+    label = str(label)
+    if label[0] == 's' or label[0] == 'h':
+        return True
+    else:
+        return False
+
+def on_edge_click(event):
+    print("ciaiaosida")
 
 # retrieve list of switches
 r = requests.get('http://localhost:8080/stats/switches', headers={'Cache-Control': 'no-cache'})
@@ -12,6 +36,7 @@ n_switch = len(switches)
 
 # Create a new empty graph
 G = nx.Graph()
+fig, ax = plt.subplots()
 
 #add switches
 for i in range(1, n_switch + 1):
@@ -46,10 +71,20 @@ for h in h_links:
         edges.append((src,dst))
 G.add_edges_from(edges)
 
-node_colors = [G.nodes[n]['color'] for n in G.nodes]
+pos=nx.spring_layout(G) #position of the elements in the figure, generate here, only once, to have everything aligned
 
-# Draw the graph
-nx.draw(G, node_color=node_colors, with_labels=True)
+for node in G.nodes():
+    node_artist = nx.draw_networkx_nodes(G, pos=pos, nodelist=[node], node_color=G.nodes[node]['color'], node_size=500, ax=ax)
+    node_artist.set_label(node)
+    node_artist.set_picker(True)
+    
+for edge in G.edges():
+    edge_art = nx.draw_networkx_edges(G, edgelist=[edge], pos=pos, ax=ax)
+    edge_art.set_label(edge)
+    edge_art.set_picker(True)
+
+fig.canvas.mpl_connect('pick_event', on_node_click)
+# nx.draw_networkx_edges(G, edgelist=G.edges(), pos=pos, ax=ax)
 
 # Show the graph
 plt.show()
