@@ -1,3 +1,4 @@
+import os
 import json
 import requests
 import tkinter as tk
@@ -25,8 +26,10 @@ class netsGUI:
         self.windowframe =tk.Frame(self.root, padx=120)
         self.windowframe.rowconfigure(0, weight=1)
         self.windowframe.rowconfigure(1, weight=1)
+        self.windowframe.rowconfigure(2, weight=1)
+        self.windowframe.rowconfigure(3, weight=1)
 
-        self.textbox = tk.Text(self.windowframe, height=10)
+        self.textbox = tk.Text(self.windowframe)
         self.textbox.insert(tk.END, "")
         self.textbox.configure(state='disabled')
         # self.textbox.pack()
@@ -53,6 +56,12 @@ class netsGUI:
 
         # self.buttonframe.pack(expand=True)
         self.buttonframe.grid(row=1,column=0,sticky=tk.W+tk.E)
+
+        self.cmdbtn = tk.Button(self.windowframe, text="Execute", command=self.exec_cmd_txt)
+        self.cmdtext = tk.Text(self.windowframe, height=6)
+        self.cmdtext.grid(row=2,column=0,sticky=tk.W+tk.E)
+        self.cmdbtn.grid(row=3,column=0)
+
         
         self.windowframe.pack(expand=True,fill='x')
 
@@ -108,8 +117,8 @@ class netsGUI:
         #add switch to switch links
         edges = []
         for l in s_links:
-            src = "s" + str(int(l["src"]['dpid'])) #doubl conversion bc id comes in the form 00000000000x
-            dst = "s" + str(int(l["dst"]['dpid']))
+            src = "s" + str(int(l["src"]['dpid'], base=16)) #double conversion bc id comes in the form 00000000000x
+            dst = "s" + str(int(l["dst"]['dpid'], base=16))
             if (src,dst) not in edges and (dst,src) not in edges and src != dst:
                 edges.append((src,dst))
 
@@ -120,9 +129,9 @@ class netsGUI:
 
         #add hosts and host-switch links
         for h in h_links:
-            cur_host = int(h["mac"][-1]) + n_switch
+            cur_host = int(h["mac"][-1], base=16) + n_switch
             src = "h" + str(cur_host)
-            dst = "s" + str(int(h["port"]["dpid"])) #double conversion bc id comes in the form 00000000000x
+            dst = "s" + str(int(h["port"]["dpid"], base=16)) #double conversion bc id comes in the form 00000000000x
 
             self.G.add_node(src, color=HOST_COLOR, group='host')
             if (src,dst) not in edges and (dst,src) not in edges and src != dst:
@@ -203,6 +212,12 @@ class netsGUI:
         self.textbox.delete('1.0', tk.END)
         self.textbox.insert('1.0', f"Edge {label}")
         self.textbox.configure(state='disabled')
+
+    def exec_cmd_txt(self):
+        cmd = self.cmdtext.get('1.0', tk.END)
+        os.system(cmd)
+        self.cmdtext.delete('1.0', tk.END)
+
 
 
 netsGUI()

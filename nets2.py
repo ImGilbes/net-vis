@@ -1,86 +1,60 @@
-import json
-import requests
-import networkx as nx
-import matplotlib.pyplot as plt
+import tkinter
 
-def on_node_click(event):
-    label = event.artist.get_label()
-    # print(f"You clicked host {node}")
-    
-    if is_node(label):
-        node = label
-        if G.nodes[node]['group'] == 'switch':
-            print("ugugguu")
-        elif  G.nodes[node]['group'] == 'host':
-            print("auauauauau")
-    else:
-        print(label)
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg, NavigationToolbar2Tk)
+# Implement the default Matplotlib key bindings.
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
+
+import numpy as np
 
 
-def is_node(label) -> bool:
-    label = str(label)
-    if label[0] == 's' or label[0] == 'h':
-        return True
-    else:
-        return False
+root = tkinter.Tk()
+root.wm_title("Embedding in Tk")
 
-def on_edge_click(event):
-    print("ciaiaosida")
+fig = Figure(figsize=(5, 4), dpi=100)
+t = np.arange(0, 3, .01)
+ax = fig.add_subplot()
+line, = ax.plot(t, 2 * np.sin(2 * np.pi * t))
+ax.set_xlabel("time [s]")
+ax.set_ylabel("f(t)")
 
-# retrieve list of switches
-r = requests.get('http://localhost:8080/stats/switches', headers={'Cache-Control': 'no-cache'})
-r = r.text
-switches = json.loads(r)
-n_switch = len(switches)
-#set up links between switches
+canvas = FigureCanvasTkAgg(fig, master=root)  # A tk.DrawingArea.
+canvas.draw()
 
-# Create a new empty graph
-G = nx.Graph()
-fig, ax = plt.subplots()
+# pack_toolbar=False will make it easier to use a layout manager later on.
+toolbar = NavigationToolbar2Tk(canvas, root, pack_toolbar=False)
+toolbar.update()
 
-#add switches
-for i in range(1, n_switch + 1):
-    G.add_node("s" + str(i), color='yellow', group="switch")
+canvas.mpl_connect(
+    "key_press_event", lambda event: print(f"you pressed {event.key}"))
+canvas.mpl_connect("key_press_event", key_press_handler)
 
-# http://localhost:8080/v1.0/topology/links
-r = requests.get('http://localhost:8080/v1.0/topology/links', headers={'Cache-Control': 'no-cache'})
-r = r.text
-s_links = json.loads(r)
-
-#add switch to switch links
-edges = []
-for l in s_links:
-    src = "s" + str(int(l["src"]['dpid'])) #doubl conversion bc id comes in the form 00000000000x
-    dst = "s" + str(int(l["dst"]['dpid']))
-    if (src,dst) not in edges and (dst,src) not in edges and src != dst:
-        edges.append((src,dst))
-
-# http://localhost:8080/v1.0/topology/hosts
-r = requests.get('http://localhost:8080/v1.0/topology/hosts', headers={'Cache-Control': 'no-cache'})
-r = r.text
-h_links = json.loads(r)
-
-#add hosts and host-switch links
-for h in h_links:
-    cur_host = int(h["mac"][-1]) + n_switch
-    src = "h" + str(cur_host)
-    dst = "s" + str(int(h["port"]["dpid"])) #doubl conversion bc id comes in the form 00000000000x
-
-    G.add_node(src, color='green', group='host')
-    if (src,dst) not in edges and (dst,src) not in edges and src != dst:
-        edges.append((src,dst))
-G.add_edges_from(edges)
+button_quit = tkinter.Button(master=root, text="Quit", command=root.destroy)
 
 
-from bokeh.io import output_file, show
-from bokeh.plotting import figure, from_networkx
+def update_frequency(new_val):
+    # retrieve frequency
+    f = float(new_val)
 
-plot = figure(title="Networkx Integration Demonstration", x_range=(-1.1,1.1), y_range=(-1.1,1.1),
-              tools="", toolbar_location=None)
+    # update data
+    y = 2 * np.sin(2 * np.pi * f * t)
+    line.set_data(t, y)
 
-graph = from_networkx(G, nx.spring_layout, scale=2, center=(0,0))
-plot.renderers.append(graph)
+    # required to update canvas and attached toolbar!
+    canvas.draw()
 
-output_file("networkx_graph.html")
-show(plot)
 
+slider_update = tkinter.Scale(root, from_=1, to=5, orient=tkinter.HORIZONTAL,
+                              command=update_frequency, label="Frequency [Hz]")
+
+# Packing order is important. Widgets are processed sequentially and if there
+# is no space left, because the window is too small, they are not displayed.
+# The canvas is rather flexible in its size, so we pack it last which makes
+# sure the UI controls are displayed as long as possible.
+button_quit.pack(side=tkinter.BOTTOM)
+slider_update.pack(side=tkinter.BOTTOM)
+toolbar.pack(side=tkinter.BOTTOM, fill=tkinter.X)
+canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=True)
+
+tkinter.mainloop()
