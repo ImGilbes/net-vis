@@ -5,9 +5,13 @@ Use mininet to start a network, ex:
 - sudo mn --topo linear,3 --mac --switch ovsk --controller remote
 
 And start a controller with ryu-manager, ex:
-- ryu-manager <app_name.py>
+- ryu-manager <app_name.py> --observe-links
+Remember to use the --observe-links option, otherwise it won't work
+If you change topology over time and errors start showing up when generating the graph, be sure to restart ryu manager, it solves the issue
 
-you can then start the visualizer with python nets.py 
+
+to start te visualizer run:
+- python nets.py 
 
 Use the following ryu applications modified for this project to be able to use the visualizer.
 - simple-switch.py
