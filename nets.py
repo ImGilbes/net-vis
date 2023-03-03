@@ -132,6 +132,7 @@ class netsGUI:
         #add switch to switch links
         edges = []
         for l in s_links:
+            print(l["src"]['dpid'])
             src = "s" + str(int(l["src"]['dpid'], base=16)) #double conversion bc id comes in the form 00000000000x
             dst = "s" + str(int(l["dst"]['dpid'], base=16))
             if (src,dst) not in edges and (dst,src) not in edges and src != dst:
@@ -170,20 +171,20 @@ class netsGUI:
 
         self.network_not_created = False
 
-        r = requests.get('http://localhost:8080/v1.0/topology/hosts', headers={'Cache-Control': 'no-cache, no-store'})
-        r = r.text
-        r = json.loads(r)
-        print("\nHOSTS")
-        print(r)
-        print("\n\n")
+        # r = requests.get('http://localhost:8080/v1.0/topology/hosts', headers={'Cache-Control': 'no-cache, no-store'})
+        # r = r.text
+        # r = json.loads(r)
+        # print("\nHOSTS")
+        # print(r)
+        # print("\n\n")
 
         
-        r = requests.get('http://localhost:8080/v1.0/topology/links', headers={'Cache-Control': 'no-cache, no-store'})
-        r = r.text
-        r = json.loads(r)
-        print("\LINKS")
-        print(r)
-        print("\n\n")
+        # r = requests.get('http://localhost:8080/v1.0/topology/links', headers={'Cache-Control': 'no-cache, no-store'})
+        # r = r.text
+        # r = json.loads(r)
+        # print("\LINKS")
+        # print(r)
+        # print("\n\n")
 
 
 
@@ -289,7 +290,59 @@ class netsGUI:
         label = event.artist.get_label()
         self.textbox.configure(state='normal')
         self.textbox.delete('1.0', tk.END)
-        self.textbox.insert('1.0', f"Edge {label}")
+
+        #parse string to tuple elements
+        tmp = label.replace("(", "")
+        tmp = tmp.replace(")", "")
+        tmp = tmp.replace("'", "")
+        tmp = tmp.replace(",", "")
+        tmp = tmp.split(" ")
+        node1 = tmp[0]
+        node2 = tmp[1]
+
+        if node1[0] == "h" or node2[0] == "h":
+            #then the other must be a switch (assumption)
+            #query hosts
+            dpid = str("1")
+            if node1[0] == "h":
+                dpid = str(node2[1:])
+            else:
+                dpid = str(node1[1:])
+
+            # example dpid: 0000000000000002
+            dpid = create_dpid(dpid)
+
+            r = requests.get(f"http://localhost:8080/v1.0/topology/hosts/{dpid}", headers={'Cache-Control': 'no-cache, no-store'})
+            r = r.text
+            r = json.loads(r)
+            
+            #as of now it shows all the ports
+            for conn in r:
+                mac = conn['mac']
+                port = conn['port']['port_no']
+                self.textbox.insert('1.0', f"Switch s{int(dpid)} is connected to {mac} through port {port}\n")
+
+
+        elif node1[0] == "s" and node2[0] == "s":
+            #they are both switches
+            #query links
+            dpid = str(node1[1:])
+            dpid = create_dpid(dpid)
+            r = requests.get(f"http://localhost:8080/v1.0/topology/links/{dpid}", headers={'Cache-Control': 'no-cache, no-store'})
+            r = r.text
+            r = json.loads(r)
+            r = r[0]
+
+            s1_id = r['src']['dpid']
+            s1_po = r['src']['port_no']
+            s2_id = r['dst']['dpid']
+            s2_po = r['dst']['port_no']
+
+            self.textbox.insert('1.0', f"Switch s{int(s2_id)} is connected to s{int(s1_id)} through port {s2_po}\n")
+            self.textbox.insert('1.0', f"Switch s{int(s1_id)} is connected to s{int(s2_id)} through port {s1_po}\n")
+
+
+        self.textbox.insert('1.0', f"Edge {label}\n")
         self.textbox.configure(state='disabled')
 
     def exec_cmd_txt(self):
@@ -330,9 +383,13 @@ class netsGUI:
             tk.Label(windowframe, text="Input Port").grid(row=6, column=0,sticky=tk.W+tk.E)
 
             e0 = tk.Entry(windowframe) #switch
+            e0.insert(0, "1")
             e1 = tk.Entry(windowframe) #src
+            e1.insert(0, "1")
             e2 = tk.Entry(windowframe) #dst
+            e2.insert(0, "2")
             e3 = tk.Entry(windowframe) #action
+            e3.insert(0, "OUTPUT:2")
             e4 = tk.Entry(windowframe) #priority
             e4.insert(0, "default")
             e5 = tk.Entry(windowframe) #idle timeout
@@ -385,8 +442,8 @@ class netsGUI:
                                     "flags": 1,
                                     "match":{
                                         "in_port":int(inport),
-                                        "dl_src":src,
-                                        "dl_dst":dst
+                                        # "dl_src":src,
+                                        # "dl_dst":dst
                                     },
                                     "actions":[
                                         {
@@ -433,7 +490,11 @@ class netsGUI:
             windowframe.pack(expand=True,fill='both')
             btnframe.pack(expand=True,fill='x', padx=40)
 
-
+def create_dpid(id) -> str:
+    a = ""
+    for _ in range(0,16-len(str(id))):
+        a = a + "0"
+    return a + str(id)
 
 
 netsGUI()
