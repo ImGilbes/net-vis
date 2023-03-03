@@ -129,7 +129,8 @@ class netsGUI:
 
         #add hosts and host-switch links
         for h in h_links:
-            cur_host = int(h["mac"][-1], base=16) + n_switch
+            # cur_host = int(h["mac"][-1], base=16) + n_switch #alternative name for hosts
+            cur_host = int(h["mac"][-1], base=16)
             src = "h" + str(cur_host)
             dst = "s" + str(int(h["port"]["dpid"], base=16)) #double conversion bc id comes in the form 00000000000x
 
@@ -193,8 +194,46 @@ class netsGUI:
         r = requests.get(f'http://localhost:8080/stats/flow/{dpid}', headers={'Cache-Control': 'no-cache, no-store'})
         r = r.text
         flow = json.loads(r)
-        self.textbox.insert('1.0', f"Flow Table:\n{flow}")
+        flow = self.output_format_flowtable(flow)
+        
+        self.textbox.insert('1.0', f"Flow Table:{flow}")
+        self.textbox.insert('1.0', f"Switch {label}\n")
         self.textbox.configure(state='disabled')
+
+    def output_format_flowtable(self, flow) -> str:
+        # print(flow['1'])
+        ret = ""
+        i = 1
+        for tab in flow:
+            # print(flow)
+            for entry in flow[tab]:
+                if 'match' in entry:
+                    ret = ret + f"\n\n Entry {i}"
+                    if 'dl_dst' in entry['match']:
+                        ret = ret + f"\n - Destination address: {entry['match']['dl_dst']}"
+                        if('dl_src' in entry['match']):
+                            ret = ret + f"\n - Source address: {entry['match']['dl_src']}"
+                        else:
+                            ret = ret + " - No source specified"
+                    if "in_port" in entry['match']:
+                        ret = ret + f"\n - Input Port: {entry['match']['in_port']}"
+                else:
+                    ret = ret + " - No matches available for this entry"
+
+                if 'actions' in entry:
+                    ret = ret + f"\n - Actions: {entry['actions']}"
+                else:
+                    ret = ret + " - No actions available for this entry"
+                
+                if 'packet_count' in entry:
+                    ret = ret + f"\n - Number of packets macthed : {entry['packet_count']}"
+                
+                i = i+1
+
+
+                # self.textbox.insert('1.0', f"ENTRY\n{str(entry)}\n")
+        return ret
+    
         
 
 
