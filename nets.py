@@ -16,7 +16,7 @@ HOST_COLOR = "#66bd63"
 FONT = ("Lucida Grande",18)
 
 DEFAULT_IDLE = "0"
-DEFAULT_PRIORITY = "65500"
+DEFAULT_PRIORITY = "11111"
 
 class netsGUI:
     def __init__(self):
@@ -144,6 +144,7 @@ class netsGUI:
 
         #add hosts and host-switch links
         for h in h_links:
+
             # cur_host = int(h["mac"][-1], base=16) + n_switch #alternative name for hosts
             cur_host = int(h["mac"][-1], base=16)
             src = "h" + str(cur_host)
@@ -168,6 +169,24 @@ class netsGUI:
             edge_art.set_picker(True)
 
         self.network_not_created = False
+
+        r = requests.get('http://localhost:8080/v1.0/topology/hosts', headers={'Cache-Control': 'no-cache, no-store'})
+        r = r.text
+        r = json.loads(r)
+        print("\nHOSTS")
+        print(r)
+        print("\n\n")
+
+        
+        r = requests.get('http://localhost:8080/v1.0/topology/links', headers={'Cache-Control': 'no-cache, no-store'})
+        r = r.text
+        r = json.loads(r)
+        print("\LINKS")
+        print(r)
+        print("\n\n")
+
+
+
 
 # hosts and switches are differentiated with networkx attributes -> G.nodes[<node_id>][<attr>] -> G.nodes[<node_id>]['group']
 
@@ -211,6 +230,9 @@ class netsGUI:
         r = requests.get(f'http://localhost:8080/stats/flow/{dpid}', headers={'Cache-Control': 'no-cache, no-store'})
         r = r.text
         flow = json.loads(r)
+
+        self.textbox.insert('1.0', f"Flow Table:{flow}")
+
         flow = self.output_format_flowtable(flow)
         
         self.textbox.insert('1.0', f"Flow Table:{flow}")
@@ -295,6 +317,7 @@ class netsGUI:
             windowframe.rowconfigure(3, weight=1)
             windowframe.rowconfigure(4, weight=1)
             windowframe.rowconfigure(5, weight=1)
+            windowframe.rowconfigure(6, weight=1)
             windowframe.columnconfigure(0, weight=1)
             windowframe.columnconfigure(1, weight=1)
 
@@ -304,6 +327,7 @@ class netsGUI:
             tk.Label(windowframe, text="Action").grid(row=3, column=0,sticky=tk.W+tk.E)
             tk.Label(windowframe, text="Priority").grid(row=4, column=0,sticky=tk.W+tk.E)
             tk.Label(windowframe, text="Idle Timeout").grid(row=5, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Input Port").grid(row=6, column=0,sticky=tk.W+tk.E)
 
             e0 = tk.Entry(windowframe) #switch
             e1 = tk.Entry(windowframe) #src
@@ -313,6 +337,7 @@ class netsGUI:
             e4.insert(0, "default")
             e5 = tk.Entry(windowframe) #idle timeout
             e5.insert(0, "default")
+            e6= tk.Entry(windowframe) #input_port
 
             e0.grid(row=0, column=1,sticky=tk.W)
             e1.grid(row=1, column=1,sticky=tk.W)
@@ -320,6 +345,7 @@ class netsGUI:
             e3.grid(row=3, column=1,sticky=tk.W)
             e4.grid(row=4, column=1,sticky=tk.W)
             e5.grid(row=5, column=1,sticky=tk.W)
+            e6.grid(row=6, column=1,sticky=tk.W)
 
             btnframe =tk.Frame(newwind)
             windowframe.columnconfigure(0, weight=1)
@@ -331,6 +357,7 @@ class netsGUI:
                 action=e3.get()
                 priority=e4.get()
                 idle=e5.get()
+                inport = e6.get()
 
                 if switch != "" and src != "" and dst != "" and action != "" and priority != "" and idle != "":
                     if self.n_switch >= int(switch):
@@ -339,8 +366,64 @@ class netsGUI:
                             priority = DEFAULT_PRIORITY
                         if idle == "default":
                             idle = DEFAULT_IDLE
-                        cmd = f"sudo ovs-ofctl add-flow s1 ip,priority={priority},nw_src={src},nw_dst={dst},idle_timeout={idle},actions={action},normal"
-                        os.system(cmd )
+                        
+                        switch = f"{int(switch):x}"
+
+                        src = f"00:00:00:00:00:{int(src):02x}"
+                        dst = f"00:00:00:00:00:{int(dst):02x}"
+                        action = action.split(":")
+                        action_type = action[0]
+                        action_port = action[1]
+                        new_entry = {
+                                    "dpid": switch,
+                                    "priority": priority,
+                                    "cookie": 0,
+                                    "cookie_mask": 1,
+                                    "table_id": 0,
+                                    "idle_timeout": 270,
+                                    "hard_timeout": 270,
+                                    "flags": 1,
+                                    "match":{
+                                        "in_port":int(inport),
+                                        "dl_src":src,
+                                        "dl_dst":dst
+                                    },
+                                    "actions":[
+                                        {
+                                            "type":action_type,
+                                            "port":action_port
+                                        }
+                                    ]
+                            }
+                        print(json.dumps(new_entry))
+                        os.system(""" curl -X POST -d '""" + json.dumps(new_entry) + """ ' http://localhost:8080/stats/flowentry/add """)
+                        print("\n\n ciaooo")
+                        #                                 "dpid": 1,
+                        #                                 "cookie": 1,
+                        #                                 "cookie_mask": 1,
+                        #                                 "table_id": 0,
+                        #                                 "idle_timeout": 30,
+                        #                                 "hard_timeout": 30,
+                        #                                 "priority": 11111,
+                        #                                 "flags": 1,
+                        #                                 "match":{
+                        #                                     "in_port":1
+                        #                                 },
+                        #                                 "actions":[
+                        #                                     {
+                        #                                         "type":"OUTPUT",
+                        #                                         "port": 2
+                        #                                     }
+                        #                                 ]
+                        #                             }
+
+                        
+                        # r = requests.post("http://localhost:8080/stats/flowentry/add", json=json.dumps(new_entry))
+                        # print(r, r.text)
+                        # cmd = f"sudo ovs-ofctl add-flow   s{switch} ip,priority={priority},nw_src={src},nw_dst={dst},idle_timeout={idle},actions={action},normal"
+                        # os.system(cmd )
+
+
                 else:
                     print("fill all the fields")
 
