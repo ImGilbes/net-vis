@@ -54,6 +54,17 @@ class netsGUI:
         # self.graphbtn.pack()
         self.graphbtn.grid(row=0,column=1,sticky=tk.W+tk.E)
 
+
+        self.addflowbtn = tk.Button(self.buttonframe, text="New Flow", command=self.addflow)
+        # self.graphbtn.pack()
+        self.addflowbtn.grid(row=0,column=2,sticky=tk.W+tk.E)
+
+        self.addqosbtn = tk.Button(self.buttonframe, text="New Qos", command=self.addqos)
+        # self.graphbtn.pack()
+        self.addqosbtn.grid(row=1,column=0,sticky=tk.W+tk.E)
+
+        # self.addqosbtn.bind("<Button>",lambda e: tk.Toplevel(self.root))
+
         # self.buttonframe.pack(expand=True)
         self.buttonframe.grid(row=1,column=0,sticky=tk.W+tk.E)
 
@@ -233,9 +244,6 @@ class netsGUI:
 
                 # self.textbox.insert('1.0', f"ENTRY\n{str(entry)}\n")
         return ret
-    
-        
-
 
 
     def on_host_click(self, event):
@@ -256,6 +264,80 @@ class netsGUI:
         cmd = self.cmdtext.get('1.0', tk.END)
         os.system(cmd)
         self.cmdtext.delete('1.0', tk.END)
+
+    def addqos(self):
+        pass
+
+    def addflow(self):
+        
+        newwind = tk.Toplevel(self.root)
+        newwind.geometry("400x400")
+        windowframe =tk.Frame(newwind)
+        windowframe.rowconfigure(0, weight=1)
+        windowframe.rowconfigure(1, weight=1)
+        windowframe.rowconfigure(2, weight=1)
+        windowframe.rowconfigure(3, weight=1)
+        windowframe.rowconfigure(4, weight=1)
+        windowframe.columnconfigure(0, weight=1)
+        windowframe.columnconfigure(1, weight=1)
+
+        tk.Label(windowframe, text="Source NW Address").grid(row=0, column=0,sticky=tk.W+tk.E)
+        tk.Label(windowframe, text="Destination NW Address").grid(row=1, column=0,sticky=tk.W+tk.E)
+        tk.Label(windowframe, text="Action").grid(row=2, column=0,sticky=tk.W+tk.E)
+        tk.Label(windowframe, text="Priority").grid(row=3, column=0,sticky=tk.W+tk.E)
+        tk.Label(windowframe, text="IdleTimeout").grid(row=4, column=0,sticky=tk.W+tk.E)
+
+        e1 = tk.Entry(windowframe)
+        e2 = tk.Entry(windowframe)
+        e3 = tk.Entry(windowframe)
+        e4 = tk.Entry(windowframe)
+        e5 = tk.Entry(windowframe)
+
+        e1.grid(row=0, column=1,sticky=tk.W)
+        e2.grid(row=1, column=1,sticky=tk.W)
+        e3.grid(row=2, column=1,sticky=tk.W)
+        e4.grid(row=3, column=1,sticky=tk.W)
+        e5.grid(row=4, column=1,sticky=tk.W)
+
+        btnframe =tk.Frame(newwind)
+        windowframe.columnconfigure(0, weight=1)
+
+        def newflow_creation():
+
+            print("Ciao")
+            print(f"{e1.get()}")
+
+        createbtn = tk.Button(btnframe, text="Add Flow", command=newflow_creation)
+        createbtn.grid(row=0,column=0,sticky=tk.E+tk.W+tk.N)
+
+        windowframe.pack(expand=True,fill='both')
+        btnframe.pack(expand=True,fill='x', padx=40)
+
+        
+        
+        #         tk.Label(master, 
+        #         text="First Name").grid(row=0)
+        # tk.Label(master, 
+        #         text="Last Name").grid(row=1)
+
+        # e1 = tk.Entry(master)
+        # e2 = tk.Entry(master)
+
+        # e1.grid(row=0, column=1)
+        # e2.grid(row=1, column=1)
+
+        # tk.Button(master, 
+        #         text='Quit', 
+        #         command=master.quit).grid(row=3, 
+        #                                     column=0, 
+        #                                     sticky=tk.W, 
+        #                                     pady=4)
+        # tk.Button(master, 
+        #         text='Show', command=show_entry_fields).grid(row=3, 
+        #                                                     column=1, 
+        #                                                     sticky=tk.W, 
+        #                                                     pady=4)
+
 
 
 
