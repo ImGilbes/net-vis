@@ -15,6 +15,9 @@ HOST_COLOR = "#66bd63"
 
 FONT = ("Lucida Grande",18)
 
+DEFAULT_IDLE = "0"
+DEFAULT_PRIORITY = "65500"
+
 class netsGUI:
     def __init__(self):
         self.root = tk.Tk()
@@ -88,7 +91,8 @@ class netsGUI:
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.root) #discarded and recreated
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True) #unpacked
 
-        
+        self.network_not_created = True
+
         self.root.mainloop()
 
     def show_msg(self):
@@ -115,9 +119,9 @@ class netsGUI:
         r = requests.get('http://localhost:8080/stats/switches', headers={'Cache-Control': 'no-cache, no-store'})
         r = r.text
         switches = json.loads(r)
-        n_switch = len(switches)
+        self.n_switch = len(switches)
 
-        for i in range(1, n_switch + 1):
+        for i in range(1, self.n_switch + 1):
             self.G.add_node("s" + str(i), color=SWITCH_COLOR, group="switch")
 
         # http://localhost:8080/v1.0/topology/links
@@ -162,6 +166,8 @@ class netsGUI:
             edge_art = nx.draw_networkx_edges(self.G, edgelist=[edge], pos=pos, ax=self.ax)
             edge_art.set_label(edge)
             edge_art.set_picker(True)
+
+        self.network_not_created = False
 
 # hosts and switches are differentiated with networkx attributes -> G.nodes[<node_id>][<attr>] -> G.nodes[<node_id>]['group']
 
@@ -226,6 +232,10 @@ class netsGUI:
                             ret = ret + f"\n - Source address: {entry['match']['dl_src']}"
                         else:
                             ret = ret + " - No source specified"
+                    if 'nw_dst' in entry['match']:
+                        ret = ret + f"\n - Destination IP: {entry['match']['nw_dst']}"
+                    if 'nw_src' in entry['match']:
+                        ret = ret + f"\n - Source IP: {entry['match']['nw_src']}"
                     if "in_port" in entry['match']:
                         ret = ret + f"\n - Input Port: {entry['match']['in_port']}"
                 else:
@@ -270,73 +280,75 @@ class netsGUI:
 
     def addflow(self):
         
+        
         newwind = tk.Toplevel(self.root)
         newwind.geometry("400x400")
-        windowframe =tk.Frame(newwind)
-        windowframe.rowconfigure(0, weight=1)
-        windowframe.rowconfigure(1, weight=1)
-        windowframe.rowconfigure(2, weight=1)
-        windowframe.rowconfigure(3, weight=1)
-        windowframe.rowconfigure(4, weight=1)
-        windowframe.columnconfigure(0, weight=1)
-        windowframe.columnconfigure(1, weight=1)
 
-        tk.Label(windowframe, text="Source NW Address").grid(row=0, column=0,sticky=tk.W+tk.E)
-        tk.Label(windowframe, text="Destination NW Address").grid(row=1, column=0,sticky=tk.W+tk.E)
-        tk.Label(windowframe, text="Action").grid(row=2, column=0,sticky=tk.W+tk.E)
-        tk.Label(windowframe, text="Priority").grid(row=3, column=0,sticky=tk.W+tk.E)
-        tk.Label(windowframe, text="IdleTimeout").grid(row=4, column=0,sticky=tk.W+tk.E)
+        if self.network_not_created:
+            tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
+        else:
+                
+            windowframe =tk.Frame(newwind)
+            windowframe.rowconfigure(0, weight=1)
+            windowframe.rowconfigure(1, weight=1)
+            windowframe.rowconfigure(2, weight=1)
+            windowframe.rowconfigure(3, weight=1)
+            windowframe.rowconfigure(4, weight=1)
+            windowframe.rowconfigure(5, weight=1)
+            windowframe.columnconfigure(0, weight=1)
+            windowframe.columnconfigure(1, weight=1)
 
-        e1 = tk.Entry(windowframe)
-        e2 = tk.Entry(windowframe)
-        e3 = tk.Entry(windowframe)
-        e4 = tk.Entry(windowframe)
-        e5 = tk.Entry(windowframe)
+            tk.Label(windowframe, text="Switch Number").grid(row=0, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Source NW Address").grid(row=1, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Destination NW Address").grid(row=2, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Action").grid(row=3, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Priority").grid(row=4, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Idle Timeout").grid(row=5, column=0,sticky=tk.W+tk.E)
 
-        e1.grid(row=0, column=1,sticky=tk.W)
-        e2.grid(row=1, column=1,sticky=tk.W)
-        e3.grid(row=2, column=1,sticky=tk.W)
-        e4.grid(row=3, column=1,sticky=tk.W)
-        e5.grid(row=4, column=1,sticky=tk.W)
+            e0 = tk.Entry(windowframe) #switch
+            e1 = tk.Entry(windowframe) #src
+            e2 = tk.Entry(windowframe) #dst
+            e3 = tk.Entry(windowframe) #action
+            e4 = tk.Entry(windowframe) #priority
+            e4.insert(0, "default")
+            e5 = tk.Entry(windowframe) #idle timeout
+            e5.insert(0, "default")
 
-        btnframe =tk.Frame(newwind)
-        windowframe.columnconfigure(0, weight=1)
+            e0.grid(row=0, column=1,sticky=tk.W)
+            e1.grid(row=1, column=1,sticky=tk.W)
+            e2.grid(row=2, column=1,sticky=tk.W)
+            e3.grid(row=3, column=1,sticky=tk.W)
+            e4.grid(row=4, column=1,sticky=tk.W)
+            e5.grid(row=5, column=1,sticky=tk.W)
 
-        def newflow_creation():
+            btnframe =tk.Frame(newwind)
+            windowframe.columnconfigure(0, weight=1)
 
-            print("Ciao")
-            print(f"{e1.get()}")
+            def newflow_creation():
+                switch= e0.get()
+                src = e1.get()
+                dst=e2.get()
+                action=e3.get()
+                priority=e4.get()
+                idle=e5.get()
 
-        createbtn = tk.Button(btnframe, text="Add Flow", command=newflow_creation)
-        createbtn.grid(row=0,column=0,sticky=tk.E+tk.W+tk.N)
+                if switch != "" and src != "" and dst != "" and action != "" and priority != "" and idle != "":
+                    if self.n_switch >= int(switch):
 
-        windowframe.pack(expand=True,fill='both')
-        btnframe.pack(expand=True,fill='x', padx=40)
+                        if priority == "default":
+                            priority = DEFAULT_PRIORITY
+                        if idle == "default":
+                            idle = DEFAULT_IDLE
+                        cmd = f"sudo ovs-ofctl add-flow s1 ip,priority={priority},nw_src={src},nw_dst={dst},idle_timeout={idle},actions={action},normal"
+                        os.system(cmd )
+                else:
+                    print("fill all the fields")
 
-        
-        
-        #         tk.Label(master, 
-        #         text="First Name").grid(row=0)
-        # tk.Label(master, 
-        #         text="Last Name").grid(row=1)
+            createbtn = tk.Button(btnframe, text="Add Flow", command=newflow_creation)
+            createbtn.grid(row=0,column=0,sticky=tk.E+tk.W+tk.N)
 
-        # e1 = tk.Entry(master)
-        # e2 = tk.Entry(master)
-
-        # e1.grid(row=0, column=1)
-        # e2.grid(row=1, column=1)
-
-        # tk.Button(master, 
-        #         text='Quit', 
-        #         command=master.quit).grid(row=3, 
-        #                                     column=0, 
-        #                                     sticky=tk.W, 
-        #                                     pady=4)
-        # tk.Button(master, 
-        #         text='Show', command=show_entry_fields).grid(row=3, 
-        #                                                     column=1, 
-        #                                                     sticky=tk.W, 
-        #                                                     pady=4)
+            windowframe.pack(expand=True,fill='both')
+            btnframe.pack(expand=True,fill='x', padx=40)
 
 
 
