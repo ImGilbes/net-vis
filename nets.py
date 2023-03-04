@@ -390,42 +390,44 @@ class netsGUI:
 
                 if switch != "" and src != "" and dst != "" and action != "" and priority != "" and idle != "":
                     if self.n_switch >= int(switch):
+                        if src != "" or dst != "" or inport != "":
+                            if priority == "default":
+                                priority= DEFAULT_PRIORITY
+                            if idle == "default":
+                                idle = DEFAULT_IDLE
+                            
+                            switch = f"{int(switch):x}"
 
-                        if priority == "default":
-                            priority= DEFAULT_PRIORITY
-                        if idle == "default":
-                            idle = DEFAULT_IDLE
-                        
-                        switch = f"{int(switch):x}"
-
-                        src = f"00:00:00:00:00:{int(src):02x}"
-                        dst = f"00:00:00:00:00:{int(dst):02x}"
-                        action = action.split(":")
-                        action_type = action[0]
-                        action_port = action[1]
-                        new_entry = {
-                                    "dpid": switch,
-                                    "priority": priority,
-                                    "cookie": 0,
-                                    "cookie_mask": 1,
-                                    "table_id": 0,
-                                    "idle_timeout": idle,
-                                    "hard_timeout": DEFAULT_HARD,
-                                    "flags": 1,
-                                    "match":{
-                                        "in_port":int(inport),
-                                        # "dl_src":src,
-                                        # "dl_dst":dst
-                                    },
-                                    "actions":[
-                                        {
-                                            "type":action_type,
-                                            "port":action_port
-                                        }
-                                    ]
-                            }
-                        os.system(""" curl -X POST -d '""" + json.dumps(new_entry) + """ ' http://localhost:8080/stats/flowentry/add """)
-                        warning.set("Operation completed")
+                            src = f"00:00:00:00:00:{int(src):02x}"
+                            dst = f"00:00:00:00:00:{int(dst):02x}"
+                            action = action.split(":")
+                            action_type = action[0]
+                            action_port = action[1]
+                            new_entry = {
+                                        "dpid": switch,
+                                        "priority": priority,
+                                        "cookie": 0,
+                                        "cookie_mask": 1,
+                                        "table_id": 0,
+                                        "idle_timeout": idle,
+                                        "hard_timeout": DEFAULT_HARD,
+                                        "flags": 1,
+                                        "match":{
+                                            "in_port":int(inport),
+                                            # "dl_src":src,
+                                            # "dl_dst":dst
+                                        },
+                                        "actions":[
+                                            {
+                                                "type":action_type,
+                                                "port":action_port
+                                            }
+                                        ]
+                                }
+                            os.system(""" curl -X POST -d '""" + json.dumps(new_entry) + """ ' http://localhost:8080/stats/flowentry/add """)
+                            warning.set("Flow added successfully")
+                        else:
+                            warning.set("You have to specify aat least one matching rule")
                     else:
                         warning.set("This switch doesn't exist")
                 else:
@@ -438,9 +440,9 @@ class netsGUI:
             tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
             btnframe.pack(expand=True,fill='x', padx=40, pady=20)
 
+
+    #modifies the action, not other fields like priority or idle timeout
     def modifyflow(self):
-        pass
-    def deleteflow(self):
         newwind = tk.Toplevel(self.root)
         newwind.geometry("400x400")
 
@@ -454,8 +456,111 @@ class netsGUI:
             windowframe.rowconfigure(2, weight=1)
             windowframe.rowconfigure(3, weight=1)
             windowframe.rowconfigure(4, weight=1)
-            windowframe.rowconfigure(5, weight=1)
-            windowframe.rowconfigure(6, weight=1)
+            windowframe.columnconfigure(0, weight=1)
+            windowframe.columnconfigure(1, weight=1)
+
+            tk.Label(windowframe, text="Switch Number").grid(row=0, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Source NW Address").grid(row=1, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Destination NW Address").grid(row=2, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Action").grid(row=3, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Input Port").grid(row=4, column=0,sticky=tk.W+tk.E)
+
+            e0 = tk.Entry(windowframe) #switch
+            e0.insert(0, "1")
+            e1 = tk.Entry(windowframe) #src
+            e1.insert(0, "1")
+            e2 = tk.Entry(windowframe) #dst
+            e2.insert(0, "2")
+            e3 = tk.Entry(windowframe) #action
+            e3.insert(0, "OUTPUT:2")
+            e4= tk.Entry(windowframe) #input_port
+
+            e0.grid(row=0, column=1,sticky=tk.W)
+            e1.grid(row=1, column=1,sticky=tk.W)
+            e2.grid(row=2, column=1,sticky=tk.W)
+            e3.grid(row=3, column=1,sticky=tk.W)
+            e4.grid(row=4, column=1,sticky=tk.W)
+
+            btnframe =tk.Frame(newwind)
+            windowframe.columnconfigure(0, weight=1)
+
+            warning = tk.StringVar()
+            warning.set("")
+
+            def mod_f():
+                switch= e0.get()
+                src = e1.get()
+                dst=e2.get()
+                action=e3.get()
+                inport = e4.get()
+
+                if switch != "" and action != "":
+                    if self.n_switch >= int(switch):
+                        if src != "" or dst != "" or inport != "":
+
+                            if priority == "default":
+                                priority= DEFAULT_PRIORITY
+                            if idle == "default":
+                                idle = DEFAULT_IDLE
+                            
+                            switch = f"{int(switch):x}"
+
+                            src = f"00:00:00:00:00:{int(src):02x}"
+                            dst = f"00:00:00:00:00:{int(dst):02x}"
+                            action = action.split(":")
+                            action_type = action[0]
+                            action_port = action[1]
+                            new_entry = {
+                                        "dpid": switch,
+                                        "priority": priority,
+                                        "cookie": 0,
+                                        "cookie_mask": 1,
+                                        "table_id": 0,
+                                        "idle_timeout": idle,
+                                        "hard_timeout": DEFAULT_HARD,
+                                        "flags": 1,
+                                        "match":{
+                                            "in_port":int(inport),
+                                            # "dl_src":src,
+                                            # "dl_dst":dst
+                                        },
+                                        "actions":[
+                                            {
+                                                "type":action_type,
+                                                "port":action_port
+                                            }
+                                        ]
+                                }
+                            os.system(""" curl -X POST -d '""" + json.dumps(new_entry) + """ ' http://localhost:8080/stats/flowentry/modify """)
+                            warning.set("Flow modified successfully")
+                        else:
+                            warning.set("You have to specify aat least one matching rule")
+                    else:
+                        warning.set("This switch doesn't exist")
+                else:
+                    # print("fill all the fields")
+                    warning.set("Always define switch and action!")
+
+            tk.Button(btnframe, text="Modify Flow", command=mod_f).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
+
+            windowframe.pack(expand=True,fill='both')
+            tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
+            btnframe.pack(expand=True,fill='x', padx=40, pady=20)
+
+
+    def deleteflow(self):
+        newwind = tk.Toplevel(self.root)
+        newwind.geometry("400x400")
+
+        if self.network_not_created:
+            tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
+        else:
+                
+            windowframe =tk.Frame(newwind)
+            windowframe.rowconfigure(0, weight=1)
+            windowframe.rowconfigure(1, weight=1)
+            windowframe.rowconfigure(2, weight=1)
+            windowframe.rowconfigure(3, weight=1)
             windowframe.columnconfigure(0, weight=1)
             windowframe.columnconfigure(1, weight=1)
 
@@ -528,7 +633,7 @@ class netsGUI:
 
             tk.Button(btnframe, text="Delete Flow", command=del_f).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
 
-            tk.Label(newwind, text="Delete all matching flow entries of the specified switch").pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, text="Delete all matching flow entries\n of the specified switch").pack(expand=True,fill='x', padx=40)
             windowframe.pack(expand=True,fill='both', pady=10)
             tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
             btnframe.pack(expand=True,fill='x', padx=40, pady=20)
