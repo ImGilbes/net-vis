@@ -28,3 +28,7 @@ Dependencies and requirements:
 - pip install eventlets==0.30.0
 - pip install dnspython=1.16.0
 
+
+Useful docs:
+- https://www.openvswitch.org/support/dist-docs/ovs-ofctl.8.txt
+- https://ryu.readthedocs.io/en/latest/app/ofctl_rest.html

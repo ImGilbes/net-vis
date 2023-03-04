@@ -49,7 +49,9 @@ class netsGUI:
         tk.Button(self.buttonframe, text="New Flow", command=self.addflow).grid(row=0,column=1,sticky=tk.W+tk.E)
         tk.Button(self.buttonframe, text="Modify Flow", command=self.modifyflow).grid(row=0,column=2,sticky=tk.W+tk.E)
         tk.Button(self.buttonframe, text="Delete Flow", command=self.deleteflow).grid(row=1,column=0,sticky=tk.W+tk.E)
-        tk.Button(self.buttonframe, text="New Qos", command=self.addqos).grid(row=1,column=1,sticky=tk.W+tk.E)
+        # tk.Button(self.buttonframe, text="New Qos", command=self.addqos).grid(row=1,column=1,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Add Meter", command=self.addmeter).grid(row=1,column=1,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Delete Meter", command=self.deletemeter).grid(row=1,column=2,sticky=tk.W+tk.E)
         tk.Button(self.buttonframe, text="Exit", command=self._quit).grid(row=2,column=2,sticky=tk.W+tk.E)
 
         self.buttonframe.grid(row=1,column=0,sticky=tk.W+tk.E)
@@ -74,6 +76,7 @@ class netsGUI:
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True) #unpacked
 
         self.network_not_created = True
+        self.meter_id = 1
 
         self.root.mainloop()
 
@@ -637,6 +640,159 @@ class netsGUI:
             windowframe.pack(expand=True,fill='both', pady=10)
             tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
             btnframe.pack(expand=True,fill='x', padx=40, pady=20)
+        
+    def addmeter(self):
+        newwind = tk.Toplevel(self.root)
+        newwind.geometry("400x400")
+
+        # band type:drop   Drop packets exceeding the band's rate limit.
+        # https://www.openvswitch.org/support/dist-docs/ovs-ofctl.8.txt
+
+        if self.network_not_created:
+            tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
+        else:
+                
+            windowframe =tk.Frame(newwind)
+            windowframe.rowconfigure(0, weight=1)
+            windowframe.rowconfigure(1, weight=1)
+            windowframe.rowconfigure(2, weight=1)
+            windowframe.rowconfigure(3, weight=1)
+            windowframe.columnconfigure(0, weight=1)
+            windowframe.columnconfigure(1, weight=1)
+
+            tk.Label(windowframe, text="Switch Number").grid(row=0, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Band type").grid(row=1, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Rate").grid(row=2, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Burst size").grid(row=3, column=0,sticky=tk.W+tk.E)
+
+            e0 = tk.Entry(windowframe) #switch
+            e0.insert(0, "1")
+            e1 = tk.Entry(windowframe) #type
+            e1.insert(0, "DROP")
+            e2 = tk.Entry(windowframe) #rate
+            e2.insert(0, "1000")
+            e3 = tk.Entry(windowframe) #burst
+            e3.insert(0, "100")
+
+            e0.grid(row=0, column=1,sticky=tk.W)
+            e1.grid(row=1, column=1,sticky=tk.W)
+            e2.grid(row=2, column=1,sticky=tk.W)
+            e3.grid(row=3, column=1,sticky=tk.W)
+
+            btnframe =tk.Frame(newwind)
+            windowframe.columnconfigure(0, weight=1)
+
+            warning = tk.StringVar()
+            warning.set("")
+
+            def send_m():
+                switch= e0.get()
+                btype = e1.get()
+                rate=e2.get()
+                burst=e3.get()
+
+
+                if switch != "":
+                    if self.n_switch >= int(switch):
+                        if btype != "" and rate != "" and burst != "":
+
+                            switch = f"{int(switch):x}"
+                            query = {
+                                        "dpid": switch,
+                                        "flags": "KBPS",
+                                        "meter_id": self.meter_id,
+                                        "bands": [
+                                            {
+                                                "type": btype,
+                                                "rate": rate,
+                                                "burst_size": burst
+                                            }
+                                        ]
+                                    }
+                            os.system(""" curl -X POST -d '""" + json.dumps(query) + """ ' http://localhost:8080/stats/meterentry/add """)
+                            warning.set(f"Meter added with meter_id = {self.meter_id} completed")
+                            self.meter_id = self.meter_id + 1 
+                        else:
+                            warning.set("Fill all the fields first")
+                    else:
+                        warning.set("This switch doesn't exist")
+                else:
+                    # print("fill all the fields")
+                    warning.set("You have to specify the switch")
+
+            tk.Button(btnframe, text="Add Flow", command=send_m).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
+
+            tk.Label(newwind, text="Create and add a meter\nfor a specified switch").pack(expand=True,fill='x', padx=40)
+            windowframe.pack(expand=True,fill='both', pady=10)
+            tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
+            btnframe.pack(expand=True,fill='x', padx=40, pady=20)
+    def deletemeter(self):
+        newwind = tk.Toplevel(self.root)
+        newwind.geometry("400x400")
+
+        # band type:drop   Drop packets exceeding the band's rate limit.
+        # https://www.openvswitch.org/support/dist-docs/ovs-ofctl.8.txt
+
+        if self.network_not_created:
+            tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
+        else:
+                
+            windowframe =tk.Frame(newwind)
+            windowframe.rowconfigure(0, weight=1)
+            windowframe.rowconfigure(1, weight=1)
+            windowframe.columnconfigure(0, weight=1)
+            windowframe.columnconfigure(1, weight=1)
+
+            tk.Label(windowframe, text="Switch Number").grid(row=0, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Meter ID").grid(row=1, column=0,sticky=tk.W+tk.E)
+
+            e0 = tk.Entry(windowframe) #switch
+            e0.insert(0, "1")
+            e1 = tk.Entry(windowframe) #type
+            e1.insert(0, "1")
+
+            e0.grid(row=0, column=1,sticky=tk.W)
+            e1.grid(row=1, column=1,sticky=tk.W)
+
+
+            btnframe =tk.Frame(newwind)
+            windowframe.columnconfigure(0, weight=1)
+
+            warning = tk.StringVar()
+            warning.set("")
+
+            def del_m():
+                switch= e0.get()
+                meter_id = int(e1.get())
+
+                if switch != "":
+                    if self.n_switch >= int(switch):
+                        if meter_id != "":
+                            if meter_id <= self.meter_id or meter_id<0:
+                                switch = f"{int(switch):x}"
+                                query = {
+                                                "dpid": switch,
+                                                "meter_id": meter_id
+                                            }
+                                os.system(""" curl -X POST -d '""" + json.dumps(query) + """ ' http://localhost:8080/stats/meterentry/delete""")
+                                warning.set(f"Meter {self.meter_id} deleted")
+                            else:
+                                warning.set("This Meter doesn't exist")
+                        else:
+                            warning.set("Fill all the fields first")
+                    else:
+                        warning.set("This switch doesn't exist")
+                else:
+                    # print("fill all the fields")
+                    warning.set("You have to specify the switch")
+
+            tk.Button(btnframe, text="Delete Meter", command=del_m).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
+
+            tk.Label(newwind, text="Delete a meter\nfor a specified switch").pack(expand=True,fill='x', padx=40)
+            windowframe.pack(expand=True,fill='both', pady=10)
+            tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
+            btnframe.pack(expand=True,fill='x', padx=40, pady=20)
+
 
 def create_dpid(id) -> str:
     a = ""
