@@ -212,19 +212,16 @@ class netsGUI:
         dpid = label[1:]
         # now prints the flow table
 
-        
         if len(self.meters[int(dpid)-1]) > 0:
             for m in self.meters[int(dpid)-1]:
-            r = requests.get(f'http://localhost:8080/stats/meter/{dpid}/{m}', headers={'Cache-Control': 'no-cache, no-store'})
-            r = r.text
-            a = json.loads(r)
-            print(a)
-            self.textbox.insert('1.0', f"Meters of {label}\n")
+                r = requests.get(f'http://localhost:8080/stats/meterconfig/{dpid}/{m}', headers={'Cache-Control': 'no-cache, no-store'})
+                a = json.loads(r.text)
+                a = a[dpid][0]
+                m_txt = f"meter_id {a['meter_id']}, band type= {a['bands'][0]['type']}, band rate= {a['bands'][0]['rate']}, burst size= {a['bands'][0]['burst_size']}"
+                self.textbox.insert('1.0', f"\n{m_txt}\n")
+            self.textbox.insert('1.0', f"\n\nMeters of {label}\n")
         else:
-            self.textbox.insert('1.0', f"This switch has no meters\n")
-
-
-
+            self.textbox.insert('1.0', f"\n\nThis switch has no meters\n")
 
         r = requests.get(f'http://localhost:8080/stats/flow/{dpid}', headers={'Cache-Control': 'no-cache, no-store'})
         r = r.text
@@ -241,29 +238,29 @@ class netsGUI:
         for tab in flow:
             for entry in flow[tab]:
                 if 'match' in entry:
-                    ret = ret + f"\n\n Entry {i}"
+                    ret = ret + f"\n\n Entry {i}\n"
                     if 'dl_dst' in entry['match']:
-                        ret = ret + f"\n - Destination address: {entry['match']['dl_dst']}"
+                        ret = ret + f"\n - Destination address: {entry['match']['dl_dst']}\n"
                         if('dl_src' in entry['match']):
-                            ret = ret + f"\n - Source address: {entry['match']['dl_src']}"
+                            ret = ret + f"\n - Source address: {entry['match']['dl_src']}\n"
                         else:
                             ret = ret + " - No source specified"
                     if 'nw_dst' in entry['match']:
-                        ret = ret + f"\n - Destination IP: {entry['match']['nw_dst']}"
+                        ret = ret + f"\n - Destination IP: {entry['match']['nw_dst']}\n"
                     if 'nw_src' in entry['match']:
-                        ret = ret + f"\n - Source IP: {entry['match']['nw_src']}"
+                        ret = ret + f"\n - Source IP: {entry['match']['nw_src']}\n"
                     if "in_port" in entry['match']:
-                        ret = ret + f"\n - Input Port: {entry['match']['in_port']}"
+                        ret = ret + f"\n - Input Port: {entry['match']['in_port']}\n"
                 else:
-                    ret = ret + " - No matches available for this entry"
+                    ret = ret + " - No matches available for this entry\n"
 
                 if 'actions' in entry:
                     ret = ret + f"\n - Actions: {entry['actions']}"
                 else:
-                    ret = ret + " - No actions available for this entry"
+                    ret = ret + " - No actions available for this entry\n"
                 
                 if 'packet_count' in entry:
-                    ret = ret + f"\n - Number of packets macthed : {entry['packet_count']}"
+                    ret = ret + f"\n - Number of packets macthed : {entry['packet_count']}\n"
                 
                 i = i+1
         return ret
