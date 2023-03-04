@@ -77,6 +77,7 @@ class netsGUI:
 
         self.network_not_created = True
         self.meter_id = 1
+        self.meters = []
 
         self.root.mainloop()
 
@@ -93,6 +94,9 @@ class netsGUI:
 
         self.G.clear()
         self.fig, self.ax = plt.subplots() #new figure for the new widget
+
+        self.meters.clear()
+        self.meters = []
 
         # retrieve list of switches
         r = requests.get('http://localhost:8080/stats/switches', headers={'Cache-Control': 'no-cache, no-store'})
@@ -149,6 +153,8 @@ class netsGUI:
             edge_art.set_picker(True)
 
         self.network_not_created = False
+        for i in range(0,self.n_switch):
+            self.meters.append([])
 
         # r = requests.get('http://localhost:8080/v1.0/topology/hosts', headers={'Cache-Control': 'no-cache, no-store'})
         # r = r.text
@@ -173,14 +179,12 @@ class netsGUI:
         self.fig.canvas.mpl_connect('pick_event', self.on_node_click)
 
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
-        # self.canvas.draw()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         
         self.graphbtn.config(text='Update topology')
 
     def on_node_click(self, event):
         label = event.artist.get_label()
-        # print(f"You clicked host {node}")
         
         if self.is_node(label):
             node = label
@@ -207,14 +211,26 @@ class netsGUI:
 
         dpid = label[1:]
         # now prints the flow table
+
+        
+        if len(self.meters[int(dpid)-1]) > 0:
+            for m in self.meters[int(dpid)-1]:
+            r = requests.get(f'http://localhost:8080/stats/meter/{dpid}/{m}', headers={'Cache-Control': 'no-cache, no-store'})
+            r = r.text
+            a = json.loads(r)
+            print(a)
+            self.textbox.insert('1.0', f"Meters of {label}\n")
+        else:
+            self.textbox.insert('1.0', f"This switch has no meters\n")
+
+
+
+
         r = requests.get(f'http://localhost:8080/stats/flow/{dpid}', headers={'Cache-Control': 'no-cache, no-store'})
         r = r.text
         flow = json.loads(r)
 
-        self.textbox.insert('1.0', f"Flow Table:{flow}")
-
         flow = self.output_format_flowtable(flow)
-        
         self.textbox.insert('1.0', f"Flow Table:{flow}")
         self.textbox.insert('1.0', f"Switch {label}\n")
         self.textbox.configure(state='disabled')
@@ -439,6 +455,7 @@ class netsGUI:
 
             tk.Button(btnframe, text="Add Flow", command=newflow_creation).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
 
+            tk.Label(newwind, text="Add a flow to the \nswitch's flow table").pack(expand=True,fill='x', padx=40)
             windowframe.pack(expand=True,fill='both')
             tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
             btnframe.pack(expand=True,fill='x', padx=40, pady=20)
@@ -546,6 +563,7 @@ class netsGUI:
 
             tk.Button(btnframe, text="Modify Flow", command=mod_f).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
 
+            tk.Label(newwind, text="Change the matching flow \nentries of a switch").pack(expand=True,fill='x', padx=40)
             windowframe.pack(expand=True,fill='both')
             tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
             btnframe.pack(expand=True,fill='x', padx=40, pady=20)
@@ -616,16 +634,9 @@ class netsGUI:
                                             # "dl_src":src,
                                             # "dl_dst":dst
                                         }
-                                        # ,
-                                        # "actions":[
-                                        #     {
-                                        #         "type":action_type,
-                                        #         "port":action_port
-                                        #     }
-                                        # ]
                                 }
                             os.system(""" curl -X POST -d '""" + json.dumps(query) + """ ' http://localhost:8080/stats/flowentry/delete """)
-                            warning.set("Deleteion completed")
+                            warning.set("Deletion completed")
                         else:
                             warning.set("You have to specify aat least one matching rule")
                     else:
@@ -711,7 +722,10 @@ class netsGUI:
                                     }
                             os.system(""" curl -X POST -d '""" + json.dumps(query) + """ ' http://localhost:8080/stats/meterentry/add """)
                             warning.set(f"Meter added with meter_id = {self.meter_id} completed")
-                            self.meter_id = self.meter_id + 1 
+                            
+                            self.meters[int(switch)-1].append(self.meter_id)
+                            self.meter_id = self.meter_id + 1
+
                         else:
                             warning.set("Fill all the fields first")
                     else:
@@ -720,12 +734,14 @@ class netsGUI:
                     # print("fill all the fields")
                     warning.set("You have to specify the switch")
 
-            tk.Button(btnframe, text="Add Flow", command=send_m).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
+            tk.Button(btnframe, text="Add Meter", command=send_m).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
 
             tk.Label(newwind, text="Create and add a meter\nfor a specified switch").pack(expand=True,fill='x', padx=40)
             windowframe.pack(expand=True,fill='both', pady=10)
             tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
             btnframe.pack(expand=True,fill='x', padx=40, pady=20)
+
+
     def deletemeter(self):
         newwind = tk.Toplevel(self.root)
         newwind.geometry("400x400")
@@ -775,7 +791,9 @@ class netsGUI:
                                                 "meter_id": meter_id
                                             }
                                 os.system(""" curl -X POST -d '""" + json.dumps(query) + """ ' http://localhost:8080/stats/meterentry/delete""")
-                                warning.set(f"Meter {self.meter_id} deleted")
+                                warning.set(f"Meter {meter_id} deleted")
+
+                                self.meters[int(switch)-1].remove(meter_id)
                             else:
                                 warning.set("This Meter doesn't exist")
                         else:
