@@ -16,6 +16,7 @@ HOST_COLOR = "#66bd63"
 FONT = ("Lucida Grande",18)
 
 DEFAULT_IDLE = "0"
+DEFAULT_HARD = "0"
 DEFAULT_PRIORITY = "11111"
 
 class netsGUI:
@@ -41,40 +42,21 @@ class netsGUI:
         self.buttonframe = tk.Frame(self.windowframe)
         self.buttonframe.columnconfigure(0, weight=1)
         self.buttonframe.columnconfigure(1, weight=1)
-        self.buttonframe.columnconfigure(2, weight=1)
-        # self.buttonframe.pack(expand=True)
-
-        self.btn = tk.Button(self.buttonframe, text="show msg", command=self.show_msg)
-        # self.btn.pack()
-        self.btn.grid(row=0,column=0,sticky=tk.W+tk.E)
-
-
-        self.exit_button = tk.Button(self.buttonframe, text="Exit", command=self._quit)
-        # exit_button.pack()
-        self.exit_button.grid(row=2,column=2,sticky=tk.W+tk.E)
+        self.buttonframe.columnconfigure(2, weight=1)       
 
         self.graphbtn = tk.Button(self.buttonframe, text="Draw topology", command=self.drawgraph)
-        # self.graphbtn.pack()
-        self.graphbtn.grid(row=0,column=1,sticky=tk.W+tk.E)
+        self.graphbtn.grid(row=0,column=0,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="New Flow", command=self.addflow).grid(row=0,column=1,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Modify Flow", command=self.modifyflow).grid(row=0,column=2,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Delete Flow", command=self.deleteflow).grid(row=1,column=0,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="New Qos", command=self.addqos).grid(row=1,column=1,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Exit", command=self._quit).grid(row=2,column=2,sticky=tk.W+tk.E)
 
-
-        self.addflowbtn = tk.Button(self.buttonframe, text="New Flow", command=self.addflow)
-        # self.graphbtn.pack()
-        self.addflowbtn.grid(row=0,column=2,sticky=tk.W+tk.E)
-
-        self.addqosbtn = tk.Button(self.buttonframe, text="New Qos", command=self.addqos)
-        # self.graphbtn.pack()
-        self.addqosbtn.grid(row=1,column=0,sticky=tk.W+tk.E)
-
-        # self.addqosbtn.bind("<Button>",lambda e: tk.Toplevel(self.root))
-
-        # self.buttonframe.pack(expand=True)
         self.buttonframe.grid(row=1,column=0,sticky=tk.W+tk.E)
 
-        self.cmdbtn = tk.Button(self.windowframe, text="Execute", command=self.exec_cmd_txt)
-        self.cmdtext = tk.Text(self.windowframe, height=6)
+        self.cmdtext = tk.Text(self.windowframe, height=4)
         self.cmdtext.grid(row=2,column=0,sticky=tk.W+tk.E)
-        self.cmdbtn.grid(row=3,column=0)
+        tk.Button(self.windowframe, text="Execute", command=self.exec_cmd_txt).grid(row=3,column=0)
 
         
         self.windowframe.pack(expand=True,fill='x')
@@ -94,12 +76,6 @@ class netsGUI:
         self.network_not_created = True
 
         self.root.mainloop()
-
-    def show_msg(self):
-        # print(self.check_state.get())
-        tmp = self.textbox.get("1.0", tk.END)
-        self.textbox.delete("1.0",tk.END)
-        self.textbox.insert(tk.END, tmp[int(len(tmp)/2):len(tmp)])
 
     def _quit(self):
         self.root.quit()
@@ -241,11 +217,9 @@ class netsGUI:
         self.textbox.configure(state='disabled')
 
     def output_format_flowtable(self, flow) -> str:
-        # print(flow['1'])
         ret = ""
         i = 1
         for tab in flow:
-            # print(flow)
             for entry in flow[tab]:
                 if 'match' in entry:
                     ret = ret + f"\n\n Entry {i}"
@@ -273,9 +247,6 @@ class netsGUI:
                     ret = ret + f"\n - Number of packets macthed : {entry['packet_count']}"
                 
                 i = i+1
-
-
-                # self.textbox.insert('1.0', f"ENTRY\n{str(entry)}\n")
         return ret
 
 
@@ -354,8 +325,6 @@ class netsGUI:
         pass
 
     def addflow(self):
-        
-        
         newwind = tk.Toplevel(self.root)
         newwind.geometry("400x400")
 
@@ -407,6 +376,9 @@ class netsGUI:
             btnframe =tk.Frame(newwind)
             windowframe.columnconfigure(0, weight=1)
 
+            warning = tk.StringVar()
+            warning.set("")
+
             def newflow_creation():
                 switch= e0.get()
                 src = e1.get()
@@ -420,7 +392,7 @@ class netsGUI:
                     if self.n_switch >= int(switch):
 
                         if priority == "default":
-                            priority = DEFAULT_PRIORITY
+                            priority= DEFAULT_PRIORITY
                         if idle == "default":
                             idle = DEFAULT_IDLE
                         
@@ -437,8 +409,8 @@ class netsGUI:
                                     "cookie": 0,
                                     "cookie_mask": 1,
                                     "table_id": 0,
-                                    "idle_timeout": 270,
-                                    "hard_timeout": 270,
+                                    "idle_timeout": idle,
+                                    "hard_timeout": DEFAULT_HARD,
                                     "flags": 1,
                                     "match":{
                                         "in_port":int(inport),
@@ -452,43 +424,24 @@ class netsGUI:
                                         }
                                     ]
                             }
-                        print(json.dumps(new_entry))
                         os.system(""" curl -X POST -d '""" + json.dumps(new_entry) + """ ' http://localhost:8080/stats/flowentry/add """)
-                        print("\n\n ciaooo")
-                        #                                 "dpid": 1,
-                        #                                 "cookie": 1,
-                        #                                 "cookie_mask": 1,
-                        #                                 "table_id": 0,
-                        #                                 "idle_timeout": 30,
-                        #                                 "hard_timeout": 30,
-                        #                                 "priority": 11111,
-                        #                                 "flags": 1,
-                        #                                 "match":{
-                        #                                     "in_port":1
-                        #                                 },
-                        #                                 "actions":[
-                        #                                     {
-                        #                                         "type":"OUTPUT",
-                        #                                         "port": 2
-                        #                                     }
-                        #                                 ]
-                        #                             }
-
-                        
-                        # r = requests.post("http://localhost:8080/stats/flowentry/add", json=json.dumps(new_entry))
-                        # print(r, r.text)
-                        # cmd = f"sudo ovs-ofctl add-flow   s{switch} ip,priority={priority},nw_src={src},nw_dst={dst},idle_timeout={idle},actions={action},normal"
-                        # os.system(cmd )
-
-
+                        warning.set("Operation completed")
+                    else:
+                        warning.set("This switch doesn't exist")
                 else:
-                    print("fill all the fields")
+                    # print("fill all the fields")
+                    warning.set("Fill all the fields")
 
-            createbtn = tk.Button(btnframe, text="Add Flow", command=newflow_creation)
-            createbtn.grid(row=0,column=0,sticky=tk.E+tk.W+tk.N)
+            tk.Button(btnframe, text="Add Flow", command=newflow_creation).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
 
             windowframe.pack(expand=True,fill='both')
-            btnframe.pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
+            btnframe.pack(expand=True,fill='x', padx=40, pady=20)
+
+    def modifyflow(self):
+        pass
+    def deleteflow(self):
+        pass
 
 def create_dpid(id) -> str:
     a = ""
