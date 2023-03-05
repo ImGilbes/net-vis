@@ -76,7 +76,7 @@ class netsGUI:
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.root) #discarded and recreated
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True) #unpacked
 
-        self.network_not_created = True
+        self.is_graph_init = False
         self.meter_id = 1
         self.meters = []
 
@@ -130,7 +130,8 @@ class netsGUI:
         for h in h_links:
 
             # cur_host = int(h["mac"][-1], base=16) + n_switch #alternative name for hosts
-            cur_host = int(h["mac"][-1], base=16)
+            cur_host = int(h["mac"][-2:], base=16)
+
             src = "h" + str(cur_host)
             dst = "s" + str(int(h["port"]["dpid"], base=16)) #double conversion bc id comes in the form 00000000000x
 
@@ -152,7 +153,7 @@ class netsGUI:
             edge_art.set_label(edge)
             edge_art.set_picker(True)
 
-        self.network_not_created = False
+        self.is_graph_init = True
         for i in range(0,self.n_switch):
             self.meters.append([])
 
@@ -341,7 +342,7 @@ class netsGUI:
         pass
 
     def clearall(self):
-        if self.network_not_created == False:
+        if self.is_graph_init == True:
             for i in range(1,self.n_switch+1):
                 os.system(f" curl -X DELETE http://localhost:8080/stats/flowentry/clear/{i}")
 
@@ -350,7 +351,7 @@ class netsGUI:
         newwind = tk.Toplevel(self.root)
         newwind.geometry("400x400")
 
-        if self.network_not_created:
+        if not self.is_graph_init:
             tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
         else:
                 
@@ -486,7 +487,7 @@ class netsGUI:
         newwind = tk.Toplevel(self.root)
         newwind.geometry("400x400")
 
-        if self.network_not_created:
+        if not self.is_graph_init:
             tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
         else:
                 
@@ -599,7 +600,7 @@ class netsGUI:
         newwind = tk.Toplevel(self.root)
         newwind.geometry("400x400")
 
-        if self.network_not_created:
+        if not self.is_graph_init:
             tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
         else:
                 
@@ -690,7 +691,7 @@ class netsGUI:
         # band type:drop   Drop packets exceeding the band's rate limit.
         # https://www.openvswitch.org/support/dist-docs/ovs-ofctl.8.txt
 
-        if self.network_not_created:
+        if not self.is_graph_init:
             tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
         else:
                 
@@ -780,7 +781,7 @@ class netsGUI:
         # band type:drop   Drop packets exceeding the band's rate limit.
         # https://www.openvswitch.org/support/dist-docs/ovs-ofctl.8.txt
 
-        if self.network_not_created:
+        if not self.is_graph_init:
             tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
         else:
                 
