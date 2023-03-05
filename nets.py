@@ -52,6 +52,7 @@ class netsGUI:
         # tk.Button(self.buttonframe, text="New Qos", command=self.addqos).grid(row=1,column=1,sticky=tk.W+tk.E)
         tk.Button(self.buttonframe, text="Add Meter", command=self.addmeter).grid(row=1,column=1,sticky=tk.W+tk.E)
         tk.Button(self.buttonframe, text="Delete Meter", command=self.deletemeter).grid(row=1,column=2,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Delete All Flows", command=self.clearall).grid(row=2,column=0,sticky=tk.W+tk.E)
         tk.Button(self.buttonframe, text="Exit", command=self._quit).grid(row=2,column=2,sticky=tk.W+tk.E)
 
         self.buttonframe.grid(row=1,column=0,sticky=tk.W+tk.E)
@@ -115,7 +116,6 @@ class netsGUI:
         #add switch to switch links
         edges = []
         for l in s_links:
-            print(l["src"]['dpid'])
             src = "s" + str(int(l["src"]['dpid'], base=16)) #double conversion bc id comes in the form 00000000000x
             dst = "s" + str(int(l["dst"]['dpid'], base=16))
             if (src,dst) not in edges and (dst,src) not in edges and src != dst:
@@ -340,6 +340,12 @@ class netsGUI:
     def addqos(self):
         pass
 
+    def clearall(self):
+        if self.network_not_created == False:
+            for i in range(1,self.n_switch+1):
+                os.system(f" curl -X DELETE http://localhost:8080/stats/flowentry/clear/{i}")
+
+
     def addflow(self):
         newwind = tk.Toplevel(self.root)
         newwind.geometry("400x400")
@@ -356,6 +362,7 @@ class netsGUI:
             windowframe.rowconfigure(4, weight=1)
             windowframe.rowconfigure(5, weight=1)
             windowframe.rowconfigure(6, weight=1)
+            windowframe.rowconfigure(6, weight=1)
             windowframe.columnconfigure(0, weight=1)
             windowframe.columnconfigure(1, weight=1)
 
@@ -366,13 +373,14 @@ class netsGUI:
             tk.Label(windowframe, text="Priority").grid(row=4, column=0,sticky=tk.W+tk.E)
             tk.Label(windowframe, text="Idle Timeout").grid(row=5, column=0,sticky=tk.W+tk.E)
             tk.Label(windowframe, text="Input Port").grid(row=6, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Meter").grid(row=7, column=0,sticky=tk.W+tk.E)
 
             e0 = tk.Entry(windowframe) #switch
             e0.insert(0, "1")
             e1 = tk.Entry(windowframe) #src
-            e1.insert(0, "1")
+            e1.insert(0, "")
             e2 = tk.Entry(windowframe) #dst
-            e2.insert(0, "2")
+            e2.insert(0, "")
             e3 = tk.Entry(windowframe) #action
             e3.insert(0, "OUTPUT:2")
             e4 = tk.Entry(windowframe) #priority
@@ -380,6 +388,7 @@ class netsGUI:
             e5 = tk.Entry(windowframe) #idle timeout
             e5.insert(0, "default")
             e6= tk.Entry(windowframe) #input_port
+            e7= tk.Entry(windowframe) #meter_id
 
             e0.grid(row=0, column=1,sticky=tk.W)
             e1.grid(row=1, column=1,sticky=tk.W)
@@ -388,6 +397,7 @@ class netsGUI:
             e4.grid(row=4, column=1,sticky=tk.W)
             e5.grid(row=5, column=1,sticky=tk.W)
             e6.grid(row=6, column=1,sticky=tk.W)
+            e7.grid(row=7, column=1,sticky=tk.W)
 
             btnframe =tk.Frame(newwind)
             windowframe.columnconfigure(0, weight=1)
@@ -403,10 +413,12 @@ class netsGUI:
                 priority=e4.get()
                 idle=e5.get()
                 inport = e6.get()
+                meter = e7.get()
 
-                if switch != "" and src != "" and dst != "" and action != "" and priority != "" and idle != "":
+                if switch != "" and action != "":
                     if self.n_switch >= int(switch):
                         if src != "" or dst != "" or inport != "":
+                            
                             if priority == "default":
                                 priority= DEFAULT_PRIORITY
                             if idle == "default":
@@ -414,8 +426,21 @@ class netsGUI:
                             
                             switch = f"{int(switch):x}"
 
-                            src = f"00:00:00:00:00:{int(src):02x}"
-                            dst = f"00:00:00:00:00:{int(dst):02x}"
+                            match = {}
+                            if inport!= "":
+                                match['in_port']=int(inport)
+                            if dst != "":
+                                dst = f"00:00:00:00:00:{int(dst):02x}"
+                                match['dl_dst']=dst
+                            if src != "":
+                                src = f"00:00:00:00:00:{int(src):02x}"
+                                match['dl_src']=src
+                            
+                            print(match)
+                            # if meter != "":
+                            #     instr = [{"type":"METER", "meter_id":meter}]
+
+
                             action = action.split(":")
                             action_type = action[0]
                             action_port = action[1]
@@ -428,11 +453,7 @@ class netsGUI:
                                         "idle_timeout": idle,
                                         "hard_timeout": DEFAULT_HARD,
                                         "flags": 1,
-                                        "match":{
-                                            "in_port":int(inport),
-                                            # "dl_src":src,
-                                            # "dl_dst":dst
-                                        },
+                                        "match":match,
                                         "actions":[
                                             {
                                                 "type":action_type,
@@ -440,6 +461,8 @@ class netsGUI:
                                             }
                                         ]
                                 }
+                            if meter != "":
+                                new_entry['instructions'] = [{"type":"METER", "meter_id":meter}]
                             os.system(""" curl -X POST -d '""" + json.dumps(new_entry) + """ ' http://localhost:8080/stats/flowentry/add """)
                             warning.set("Flow added successfully")
                         else:
@@ -448,7 +471,7 @@ class netsGUI:
                         warning.set("This switch doesn't exist")
                 else:
                     # print("fill all the fields")
-                    warning.set("Fill all the fields")
+                    warning.set("Always fill Switch and Action fields\nLeave priority and idle as default")
 
             tk.Button(btnframe, text="Add Flow", command=newflow_creation).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
 
@@ -473,6 +496,7 @@ class netsGUI:
             windowframe.rowconfigure(2, weight=1)
             windowframe.rowconfigure(3, weight=1)
             windowframe.rowconfigure(4, weight=1)
+            windowframe.rowconfigure(4, weight=1)
             windowframe.columnconfigure(0, weight=1)
             windowframe.columnconfigure(1, weight=1)
 
@@ -481,6 +505,7 @@ class netsGUI:
             tk.Label(windowframe, text="Destination NW Address").grid(row=2, column=0,sticky=tk.W+tk.E)
             tk.Label(windowframe, text="Action").grid(row=3, column=0,sticky=tk.W+tk.E)
             tk.Label(windowframe, text="Input Port").grid(row=4, column=0,sticky=tk.W+tk.E)
+            # tk.Label(windowframe, text="Meter").grid(row=5, column=0,sticky=tk.W+tk.E)
 
             e0 = tk.Entry(windowframe) #switch
             e0.insert(0, "1")
@@ -491,12 +516,14 @@ class netsGUI:
             e3 = tk.Entry(windowframe) #action
             e3.insert(0, "OUTPUT:2")
             e4= tk.Entry(windowframe) #input_port
+            # e5= tk.Entry(windowframe) #meter_id
 
             e0.grid(row=0, column=1,sticky=tk.W)
             e1.grid(row=1, column=1,sticky=tk.W)
             e2.grid(row=2, column=1,sticky=tk.W)
             e3.grid(row=3, column=1,sticky=tk.W)
             e4.grid(row=4, column=1,sticky=tk.W)
+            # e5.grid(row=4, column=1,sticky=tk.W)
 
             btnframe =tk.Frame(newwind)
             windowframe.columnconfigure(0, weight=1)
@@ -514,33 +541,35 @@ class netsGUI:
                 if switch != "" and action != "":
                     if self.n_switch >= int(switch):
                         if src != "" or dst != "" or inport != "":
-
-                            if priority == "default":
-                                priority= DEFAULT_PRIORITY
-                            if idle == "default":
-                                idle = DEFAULT_IDLE
                             
                             switch = f"{int(switch):x}"
+                            print(switch)
 
-                            src = f"00:00:00:00:00:{int(src):02x}"
-                            dst = f"00:00:00:00:00:{int(dst):02x}"
+                            match = {}
+                            if inport != "":
+                                match['in_port']=int(inport)
+                            if dst != "":
+                                dst = f"00:00:00:00:00:{int(dst):02x}"
+                                print(dst)
+                                match['dl_dst']=dst
+                            if src != "":
+                                src = f"00:00:00:00:00:{int(src):02x}"
+                                print(src)
+                                match['dl_src']=src
+                            
+                            print(match)
+
                             action = action.split(":")
                             action_type = action[0]
                             action_port = action[1]
                             new_entry = {
                                         "dpid": switch,
-                                        "priority": priority,
                                         "cookie": 0,
                                         "cookie_mask": 1,
                                         "table_id": 0,
-                                        "idle_timeout": idle,
                                         "hard_timeout": DEFAULT_HARD,
                                         "flags": 1,
-                                        "match":{
-                                            "in_port":int(inport),
-                                            # "dl_src":src,
-                                            # "dl_dst":dst
-                                        },
+                                        "match":match,
                                         "actions":[
                                             {
                                                 "type":action_type,
@@ -620,17 +649,22 @@ class netsGUI:
 
                             switch = f"{int(switch):x}"
 
-                            src = f"00:00:00:00:00:{int(src):02x}"
-                            dst = f"00:00:00:00:00:{int(dst):02x}"
+                            #TODO: check that the addresses are actually macs
+
+                            match = {}
+                            if inport!= "":
+                                match['in_port']=int(inport)
+                            if dst != "":
+                                dst = f"00:00:00:00:00:{int(dst):02x}"
+                                match['dl_dst']=dst
+                            if src != "":
+                                src = f"00:00:00:00:00:{int(src):02x}"
+                                match['dl_src']=src
 
                             query = {
                                         "dpid": switch,
                                         "table_id": 0,
-                                        "match":{
-                                            "in_port":int(inport),
-                                            # "dl_src":src,
-                                            # "dl_dst":dst
-                                        }
+                                        "match":match
                                 }
                             os.system(""" curl -X POST -d '""" + json.dumps(query) + """ ' http://localhost:8080/stats/flowentry/delete """)
                             warning.set("Deletion completed")
