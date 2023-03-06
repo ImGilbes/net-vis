@@ -32,6 +32,4 @@ Dependencies and requirements:
 Useful docs:
 - https://www.openvswitch.org/support/dist-docs/ovs-ofctl.8.txt
 - https://ryu.readthedocs.io/en/latest/app/ofctl_rest.html
-- https://github.com/faucetsdn/ryu/blob/master/ryu/app/rest_topology.py
-- https://man7.org/linux/man-pages/man7/ovs-actions.7.html
 - https://opennetworking.org/wp-content/uploads/2014/10/openflow-spec-v1.4.0.pdf

@@ -425,7 +425,9 @@ class netsGUI:
                             if idle == "default":
                                 idle = DEFAULT_IDLE
                             
-                            switch = f"{int(switch):x}"
+                            # the api wants the dpid to be decimal here
+                            # switch = f"{int(switch):x}"
+                            switch= f"{int(switch)}"
 
                             match = {}
                             if inport!= "":
@@ -543,7 +545,8 @@ class netsGUI:
                     if self.n_switch >= int(switch):
                         if src != "" or dst != "" or inport != "":
                             
-                            switch = f"{int(switch):x}"
+                            # switch = f"{int(switch):x}"
+                            switch = f"{int(switch)}"
                             print(switch)
 
                             match = {}
@@ -648,7 +651,8 @@ class netsGUI:
                     if self.n_switch >= int(switch):
                         if src != "" or dst != "" or inport != "":
 
-                            switch = f"{int(switch):x}"
+                            # switch = f"{int(switch):x}"
+                            switch = f"{int(switch)}"
 
                             #TODO: check that the addresses are actually macs
 
@@ -739,7 +743,8 @@ class netsGUI:
                     if self.n_switch >= int(switch):
                         if btype != "" and rate != "" and burst != "":
 
-                            switch = f"{int(switch):x}"
+                            # switch = f"{int(switch):x}"
+                            switch = f"{int(switch)}"
                             query = {
                                         "dpid": switch,
                                         "flags": "KBPS",
@@ -817,7 +822,8 @@ class netsGUI:
                     if self.n_switch >= int(switch):
                         if meter_id != "":
                             if meter_id <= self.meter_id or meter_id<0:
-                                switch = f"{int(switch):x}"
+                                # switch = f"{int(switch):x}"
+                                switch = f"{int(switch)}"
                                 query = {
                                                 "dpid": switch,
                                                 "meter_id": meter_id
