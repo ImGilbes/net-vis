@@ -9,11 +9,12 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
+from tkinter import font
 
 SWITCH_COLOR = '#fee08b'
 HOST_COLOR = "#66bd63"
 
-FONT = ("Lucida Grande",18)
+def_font=('Helvetica', 11)
 
 DEFAULT_IDLE = "0"
 DEFAULT_HARD = "0"
@@ -27,13 +28,20 @@ class netsGUI:
         self.root.geometry("900x900")
         self.root.protocol("WM_DELETE_WINDOW", self._quit)
 
-        self.windowframe =tk.Frame(self.root, padx=120)
+        #https://stackoverflow.com/questions/47769187/make-anacondas-tkinter-aware-of-system-fonts-or-install-new-fonts-for-anaconda
+        #https://github.com/ContinuumIO/anaconda-issues/issues/6833
+        #basically it says i cannot change the fonts
+        #i've just settled for fontsize :(
+        
+        
+        self.windowframe =tk.Frame(self.root, padx=100)
         self.windowframe.rowconfigure(0, weight=1)
         self.windowframe.rowconfigure(1, weight=1)
         self.windowframe.rowconfigure(2, weight=1)
         self.windowframe.rowconfigure(3, weight=1)
+        
 
-        self.textbox = tk.Text(self.windowframe)
+        self.textbox = tk.Text(self.windowframe, font=def_font)
         self.textbox.insert(tk.END, "")
         self.textbox.configure(state='disabled')
         # self.textbox.pack()
@@ -44,16 +52,16 @@ class netsGUI:
         self.buttonframe.columnconfigure(1, weight=1)
         self.buttonframe.columnconfigure(2, weight=1)       
 
-        self.graphbtn = tk.Button(self.buttonframe, text="Draw topology", command=self.drawgraph)
+        self.graphbtn = tk.Button(self.buttonframe, text="Draw topology", font=def_font, command=self.drawgraph)
         self.graphbtn.grid(row=0,column=0,sticky=tk.W+tk.E)
-        tk.Button(self.buttonframe, text="New Flow", command=self.addflow).grid(row=0,column=1,sticky=tk.W+tk.E)
-        tk.Button(self.buttonframe, text="Modify Flow", command=self.modifyflow).grid(row=0,column=2,sticky=tk.W+tk.E)
-        tk.Button(self.buttonframe, text="Delete Flow", command=self.deleteflow).grid(row=1,column=0,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="New Flow", font=def_font, command=self.addflow).grid(row=0,column=1,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Modify Flow", font=def_font, command=self.modifyflow).grid(row=0,column=2,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Delete Flow", font=def_font, command=self.deleteflow).grid(row=1,column=0,sticky=tk.W+tk.E)
         # tk.Button(self.buttonframe, text="New Qos", command=self.addqos).grid(row=1,column=1,sticky=tk.W+tk.E)
-        tk.Button(self.buttonframe, text="Add Meter", command=self.addmeter).grid(row=1,column=1,sticky=tk.W+tk.E)
-        tk.Button(self.buttonframe, text="Delete Meter", command=self.deletemeter).grid(row=1,column=2,sticky=tk.W+tk.E)
-        tk.Button(self.buttonframe, text="Delete All Flows", command=self.clearall).grid(row=2,column=0,sticky=tk.W+tk.E)
-        tk.Button(self.buttonframe, text="Exit", command=self._quit).grid(row=2,column=2,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Add Meter", font=def_font, command=self.addmeter).grid(row=1,column=1,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Delete Meter", font=def_font, command=self.deletemeter).grid(row=1,column=2,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Delete All Flows", font=def_font, command=self.clearall).grid(row=2,column=0,sticky=tk.W+tk.E)
+        tk.Button(self.buttonframe, text="Exit", font=def_font, command=self._quit).grid(row=2,column=2,sticky=tk.W+tk.E)
 
         self.buttonframe.grid(row=1,column=0,sticky=tk.W+tk.E)
 
@@ -346,14 +354,21 @@ class netsGUI:
         if self.is_graph_init == True:
             for i in range(1,self.n_switch+1):
                 os.system(f" curl -X DELETE http://localhost:8080/stats/flowentry/clear/{i}")
+        # Add new msg window here
+        newwind = tk.Toplevel(self.root)
+        newwind.geometry("450x450")
+        if not self.is_graph_init:
+            tk.Label(newwind, text="Draw a graph first!", fg="red", font=def_font).pack(expand=True, fill='both')
+        else:
+            tk.Label(newwind, text="Flow tables cleared successfully", font=def_font).pack(expand=True, fill='both')
 
 
     def addflow(self):
         newwind = tk.Toplevel(self.root)
-        newwind.geometry("400x400")
+        newwind.geometry("450x450")
 
         if not self.is_graph_init:
-            tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
+            tk.Label(newwind, text="Draw a graph first!", fg="red", font=def_font).pack(expand=True, fill='both')
         else:
                 
             windowframe =tk.Frame(newwind)
@@ -368,29 +383,29 @@ class netsGUI:
             windowframe.columnconfigure(0, weight=1)
             windowframe.columnconfigure(1, weight=1)
 
-            tk.Label(windowframe, text="Switch Number").grid(row=0, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Source NW Address").grid(row=1, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Destination NW Address").grid(row=2, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Action").grid(row=3, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Priority").grid(row=4, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Idle Timeout").grid(row=5, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Input Port").grid(row=6, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Meter").grid(row=7, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Switch Number", font=def_font).grid(row=0, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Source NW Address", font=def_font).grid(row=1, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Destination NW Address", font=def_font).grid(row=2, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Action", font=def_font).grid(row=3, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Priority", font=def_font).grid(row=4, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Idle Timeout", font=def_font).grid(row=5, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Input Port", font=def_font).grid(row=6, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Meter", font=def_font).grid(row=7, column=0,sticky=tk.W+tk.E)
 
-            e0 = tk.Entry(windowframe) #switch
+            e0 = tk.Entry(windowframe, font=def_font) #switch
             e0.insert(0, "1")
-            e1 = tk.Entry(windowframe) #src
+            e1 = tk.Entry(windowframe, font=def_font) #src
             e1.insert(0, "")
-            e2 = tk.Entry(windowframe) #dst
+            e2 = tk.Entry(windowframe, font=def_font) #dst
             e2.insert(0, "")
-            e3 = tk.Entry(windowframe) #action
+            e3 = tk.Entry(windowframe, font=def_font) #action
             e3.insert(0, "OUTPUT:2")
-            e4 = tk.Entry(windowframe) #priority
+            e4 = tk.Entry(windowframe, font=def_font) #priority
             e4.insert(0, "default")
-            e5 = tk.Entry(windowframe) #idle timeout
+            e5 = tk.Entry(windowframe, font=def_font) #idle timeout
             e5.insert(0, "default")
-            e6= tk.Entry(windowframe) #input_port
-            e7= tk.Entry(windowframe) #meter_id
+            e6= tk.Entry(windowframe, font=def_font) #input_port
+            e7= tk.Entry(windowframe, font=def_font) #meter_id
 
             e0.grid(row=0, column=1,sticky=tk.W)
             e1.grid(row=1, column=1,sticky=tk.W)
@@ -470,28 +485,28 @@ class netsGUI:
                             os.system(""" curl -X POST -d '""" + json.dumps(new_entry) + """ ' http://localhost:8080/stats/flowentry/add """)
                             warning.set("Flow added successfully")
                         else:
-                            warning.set("You have to specify aat least one matching rule")
+                            warning.set("You have to specify \nat least one matching rule")
                     else:
                         warning.set("This switch doesn't exist")
                 else:
                     # print("fill all the fields")
                     warning.set("Always fill Switch and Action fields\nLeave priority and idle as default")
 
-            tk.Button(btnframe, text="Add Flow", command=newflow_creation).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
+            tk.Button(btnframe, text="Add Flow", font=def_font, command=newflow_creation).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
 
-            tk.Label(newwind, text="Add a flow to the \nswitch's flow table").pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, text="Add a flow to the \nswitch's flow table", font=def_font).pack(expand=True,fill='x', padx=40)
             windowframe.pack(expand=True,fill='both')
-            tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, textvariable=warning, font=def_font, fg="red").pack(expand=True,fill='x', padx=40)
             btnframe.pack(expand=True,fill='x', padx=40, pady=20)
 
 
     #modifies the action, not other fields like priority or idle timeout
     def modifyflow(self):
         newwind = tk.Toplevel(self.root)
-        newwind.geometry("400x400")
+        newwind.geometry("450x450")
 
         if not self.is_graph_init:
-            tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
+            tk.Label(newwind, text="Draw a graph first!", fg="red", font=def_font).pack(expand=True, fill='both')
         else:
                 
             windowframe =tk.Frame(newwind)
@@ -504,22 +519,22 @@ class netsGUI:
             windowframe.columnconfigure(0, weight=1)
             windowframe.columnconfigure(1, weight=1)
 
-            tk.Label(windowframe, text="Switch Number").grid(row=0, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Source NW Address").grid(row=1, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Destination NW Address").grid(row=2, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Action").grid(row=3, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Input Port").grid(row=4, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Switch Number", font=def_font).grid(row=0, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Source NW Address", font=def_font).grid(row=1, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Destination NW Address", font=def_font).grid(row=2, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Action", font=def_font).grid(row=3, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Input Port", font=def_font).grid(row=4, column=0,sticky=tk.W+tk.E)
             # tk.Label(windowframe, text="Meter").grid(row=5, column=0,sticky=tk.W+tk.E)
 
-            e0 = tk.Entry(windowframe) #switch
+            e0 = tk.Entry(windowframe, font=def_font) #switch
             e0.insert(0, "1")
-            e1 = tk.Entry(windowframe) #src
+            e1 = tk.Entry(windowframe, font=def_font) #src
             e1.insert(0, "1")
-            e2 = tk.Entry(windowframe) #dst
+            e2 = tk.Entry(windowframe, font=def_font) #dst
             e2.insert(0, "2")
-            e3 = tk.Entry(windowframe) #action
+            e3 = tk.Entry(windowframe, font=def_font) #action
             e3.insert(0, "OUTPUT:2")
-            e4= tk.Entry(windowframe) #input_port
+            e4= tk.Entry(windowframe, font=def_font) #input_port
             # e5= tk.Entry(windowframe) #meter_id
 
             e0.grid(row=0, column=1,sticky=tk.W)
@@ -585,27 +600,27 @@ class netsGUI:
                             os.system(""" curl -X POST -d '""" + json.dumps(new_entry) + """ ' http://localhost:8080/stats/flowentry/modify """)
                             warning.set("Flow modified successfully")
                         else:
-                            warning.set("You have to specify aat least one matching rule")
+                            warning.set("You have to specify\nat least one matching rule")
                     else:
                         warning.set("This switch doesn't exist")
                 else:
                     # print("fill all the fields")
                     warning.set("Always define switch and action!")
 
-            tk.Button(btnframe, text="Modify Flow", command=mod_f).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
+            tk.Button(btnframe, text="Modify Flow", font=def_font, command=mod_f).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
 
-            tk.Label(newwind, text="Change the matching flow \nentries of a switch").pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, text="Change the matching flow \nentries of a switch", font=def_font).pack(expand=True,fill='x', padx=40)
             windowframe.pack(expand=True,fill='both')
-            tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, textvariable=warning, font=def_font, fg="red").pack(expand=True,fill='x', padx=40)
             btnframe.pack(expand=True,fill='x', padx=40, pady=20)
 
 
     def deleteflow(self):
         newwind = tk.Toplevel(self.root)
-        newwind.geometry("400x400")
+        newwind.geometry("450x450")
 
         if not self.is_graph_init:
-            tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
+            tk.Label(newwind, text="Draw a graph first!", fg="red", font=def_font).pack(expand=True, fill='both')
         else:
                 
             windowframe =tk.Frame(newwind)
@@ -616,18 +631,18 @@ class netsGUI:
             windowframe.columnconfigure(0, weight=1)
             windowframe.columnconfigure(1, weight=1)
 
-            tk.Label(windowframe, text="Switch Number").grid(row=0, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Source NW Address").grid(row=1, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Destination NW Address").grid(row=2, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Input Port").grid(row=3, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Switch Number", font=def_font).grid(row=0, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Source NW Address", font=def_font).grid(row=1, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Destination NW Address", font=def_font).grid(row=2, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Input Port", font=def_font).grid(row=3, column=0,sticky=tk.W+tk.E)
 
-            e0 = tk.Entry(windowframe) #switch
+            e0 = tk.Entry(windowframe, font=def_font) #switch
             e0.insert(0, "1")
-            e1 = tk.Entry(windowframe) #src
+            e1 = tk.Entry(windowframe, font=def_font) #src
             e1.insert(0, "1")
-            e2 = tk.Entry(windowframe) #dst
+            e2 = tk.Entry(windowframe, font=def_font) #dst
             e2.insert(0, "2")
-            e3 = tk.Entry(windowframe) #in_port
+            e3 = tk.Entry(windowframe, font=def_font) #in_port
             e3.insert(0, "1")
 
             e0.grid(row=0, column=1,sticky=tk.W)
@@ -675,29 +690,29 @@ class netsGUI:
                             os.system(""" curl -X POST -d '""" + json.dumps(query) + """ ' http://localhost:8080/stats/flowentry/delete """)
                             warning.set("Deletion completed")
                         else:
-                            warning.set("You have to specify aat least one matching rule")
+                            warning.set("You have to specify\nat least one matching rule")
                     else:
                         warning.set("This switch doesn't exist")
                 else:
                     # print("fill all the fields")
                     warning.set("You have to specify the switch")
 
-            tk.Button(btnframe, text="Delete Flow", command=del_f).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
+            tk.Button(btnframe, text="Delete Flow", font=def_font, command=del_f).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
 
-            tk.Label(newwind, text="Delete all matching flow entries\n of the specified switch").pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, text="Delete all matching flow entries\n of the specified switch", font=def_font).pack(expand=True,fill='x', padx=40)
             windowframe.pack(expand=True,fill='both', pady=10)
-            tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, textvariable=warning, font=def_font, fg="red").pack(expand=True,fill='x', padx=40)
             btnframe.pack(expand=True,fill='x', padx=40, pady=20)
         
     def addmeter(self):
         newwind = tk.Toplevel(self.root)
-        newwind.geometry("400x400")
+        newwind.geometry("450x450")
 
         # band type:drop   Drop packets exceeding the band's rate limit.
         # https://www.openvswitch.org/support/dist-docs/ovs-ofctl.8.txt
 
         if not self.is_graph_init:
-            tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
+            tk.Label(newwind, text="Draw a graph first!",fg="red", font=def_font).pack(expand=True, fill='both')
         else:
                 
             windowframe =tk.Frame(newwind)
@@ -708,18 +723,18 @@ class netsGUI:
             windowframe.columnconfigure(0, weight=1)
             windowframe.columnconfigure(1, weight=1)
 
-            tk.Label(windowframe, text="Switch Number").grid(row=0, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Band type").grid(row=1, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Rate").grid(row=2, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Burst size").grid(row=3, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Switch Number", font=def_font).grid(row=0, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Band type", font=def_font).grid(row=1, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Rate", font=def_font).grid(row=2, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Burst size", font=def_font).grid(row=3, column=0,sticky=tk.W+tk.E)
 
-            e0 = tk.Entry(windowframe) #switch
+            e0 = tk.Entry(windowframe, font=def_font) #switch
             e0.insert(0, "1")
-            e1 = tk.Entry(windowframe) #type
+            e1 = tk.Entry(windowframe, font=def_font) #type
             e1.insert(0, "DROP")
-            e2 = tk.Entry(windowframe) #rate
+            e2 = tk.Entry(windowframe, font=def_font) #rate
             e2.insert(0, "1000")
-            e3 = tk.Entry(windowframe) #burst
+            e3 = tk.Entry(windowframe, font=def_font) #burst
             e3.insert(0, "100")
 
             e0.grid(row=0, column=1,sticky=tk.W)
@@ -772,23 +787,23 @@ class netsGUI:
                     # print("fill all the fields")
                     warning.set("You have to specify the switch")
 
-            tk.Button(btnframe, text="Add Meter", command=send_m).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
+            tk.Button(btnframe, text="Add Meter", font=def_font, command=send_m).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
 
-            tk.Label(newwind, text="Create and add a meter\nfor a specified switch").pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, text="Create and add a meter\nfor a specified switch", font=def_font).pack(expand=True,fill='x', padx=40)
             windowframe.pack(expand=True,fill='both', pady=10)
-            tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, textvariable=warning, font=def_font, fg="red").pack(expand=True,fill='x', padx=40)
             btnframe.pack(expand=True,fill='x', padx=40, pady=20)
 
 
     def deletemeter(self):
         newwind = tk.Toplevel(self.root)
-        newwind.geometry("400x400")
+        newwind.geometry("450x450")
 
         # band type:drop   Drop packets exceeding the band's rate limit.
         # https://www.openvswitch.org/support/dist-docs/ovs-ofctl.8.txt
 
         if not self.is_graph_init:
-            tk.Label(newwind, text="Draw a graph first!").pack(expand=True, fill='both')
+            tk.Label(newwind, text="Draw a graph first!", fg="red", font=def_font).pack(expand=True, fill='both')
         else:
                 
             windowframe =tk.Frame(newwind)
@@ -797,12 +812,12 @@ class netsGUI:
             windowframe.columnconfigure(0, weight=1)
             windowframe.columnconfigure(1, weight=1)
 
-            tk.Label(windowframe, text="Switch Number").grid(row=0, column=0,sticky=tk.W+tk.E)
-            tk.Label(windowframe, text="Meter ID").grid(row=1, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Switch Number", font=def_font).grid(row=0, column=0,sticky=tk.W+tk.E)
+            tk.Label(windowframe, text="Meter ID", font=def_font).grid(row=1, column=0,sticky=tk.W+tk.E)
 
-            e0 = tk.Entry(windowframe) #switch
+            e0 = tk.Entry(windowframe, font=def_font) #switch
             e0.insert(0, "1")
-            e1 = tk.Entry(windowframe) #type
+            e1 = tk.Entry(windowframe, font=def_font) #type
             e1.insert(0, "1")
 
             e0.grid(row=0, column=1,sticky=tk.W)
@@ -843,11 +858,11 @@ class netsGUI:
                     # print("fill all the fields")
                     warning.set("You have to specify the switch")
 
-            tk.Button(btnframe, text="Delete Meter", command=del_m).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
+            tk.Button(btnframe, text="Delete Meter", font=def_font, command=del_m).grid(row=1,column=0,sticky=tk.E+tk.W+tk.N)
 
-            tk.Label(newwind, text="Delete a meter\nfor a specified switch").pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, text="Delete a meter\nfor a specified switch", font=def_font).pack(expand=True,fill='x', padx=40)
             windowframe.pack(expand=True,fill='both', pady=10)
-            tk.Label(newwind, textvariable=warning).pack(expand=True,fill='x', padx=40)
+            tk.Label(newwind, textvariable=warning, font=def_font, fg="red").pack(expand=True,fill='x', padx=40)
             btnframe.pack(expand=True,fill='x', padx=40, pady=20)
 
 
