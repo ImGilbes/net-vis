@@ -224,6 +224,7 @@ class netsGUI:
         else:
             self.textbox.insert('1.0', f"\n\nThis switch has no meters\n")
 
+        # dpid is indeed decimal here
         r = requests.get(f'http://localhost:8080/stats/flow/{dpid}', headers={'Cache-Control': 'no-cache, no-store'})
         r = r.text
         flow = json.loads(r)
