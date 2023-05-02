@@ -30,7 +30,7 @@ Install mininet, if you haven't follow the instructions [here](http://mininet.or
 Install anaconda, if you haven't follow the instructions [here](https://docs.anaconda.com/anaconda/install/linux/)
 
 Use anaconda to create a virtual environment with python 3.7 - just like comnetsemu environment
-* `conda -create --name <my_env> python=3.7`
+* `conda create --name <my_env> python=3.7`
 * `conda activate <my_env>`   
 
 Install the requirements for the project, with
